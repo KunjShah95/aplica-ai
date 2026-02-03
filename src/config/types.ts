@@ -70,10 +70,19 @@ export interface MessagingConfig {
 }
 
 export interface MemoryConfig {
-  type: 'jsonl' | 'sqlite' | 'vector';
+  type: 'jsonl' | 'sqlite' | 'postgres';
   path: string;
   maxEntries: number;
   searchEnabled: boolean;
+  postgres?: {
+    host?: string;
+    port?: number;
+    database?: string;
+    user?: string;
+    password?: string;
+    tablePrefix?: string;
+    enableVector?: boolean;
+  };
 }
 
 export interface SecurityConfig {

@@ -1,12 +1,14 @@
 export { JSONLStore, jsonlStore } from './jsonl.js';
 export { MarkdownMemory, markdownMemory } from './markdown.js';
 export { SQLiteMemory, sqliteMemory } from './sqlite.js';
+export { PostgresMemory, postgresMemory } from './postgres.js';
 
 import { jsonlStore, MemoryEntry, MemoryMetadata } from './jsonl.js';
 import { markdownMemory, MarkdownNote, DailyLog, LogEntry } from './markdown.js';
 import { sqliteMemory, SearchResult } from './sqlite.js';
+import { postgresMemory } from './postgres.js';
 
-export type MemoryStore = 'jsonl' | 'markdown' | 'sqlite';
+export type MemoryStore = 'jsonl' | 'markdown' | 'sqlite' | 'postgres';
 
 export interface MemoryManagerOptions {
   defaultStore?: MemoryStore;
@@ -21,6 +23,7 @@ export interface MemorySearchOptions {
   limit?: number;
   type?: string;
   tags?: string[];
+  userId?: string;
 }
 
 export interface MemoryResult {
@@ -91,7 +94,32 @@ export class MemoryManager {
     const { query, store, limit = 10, type, tags } = options;
     const results: MemoryResult[] = [];
 
-    const storesToSearch = store ? [store] : ['jsonl', 'sqlite'];
+    const storesToSearch = store ? [store] : ['jsonl', 'sqlite', 'postgres'];
+
+    if (storesToSearch.includes('postgres')) {
+      try {
+        const postgresResults = await postgresMemory.search({
+          query,
+          limit,
+          type: type as any,
+          tags,
+          userId: options.userId || 'default',
+        });
+        results.push({
+          store: 'postgres',
+          results: postgresResults.map((r) => ({
+            id: r.id,
+            content: r.content,
+            metadata: r.metadata,
+            score: r.similarity || 0.5,
+            type: r.type,
+            createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+          })),
+        });
+      } catch (error) {
+        console.error('PostgreSQL search failed:', error);
+      }
+    }
 
     if (storesToSearch.includes('sqlite')) {
       try {
@@ -202,8 +230,12 @@ export class MemoryManager {
   }
 
   async forget(id: string, store?: MemoryStore): Promise<boolean> {
-    const stores = store ? [store] : ['jsonl', 'sqlite', 'markdown'];
+    const stores = store ? [store] : ['jsonl', 'sqlite', 'markdown', 'postgres'];
     let deleted = false;
+
+    if (stores.includes('postgres')) {
+      deleted = (await postgresMemory.delete(id)) || deleted;
+    }
 
     if (stores.includes('sqlite')) {
       deleted = (await sqliteMemory.delete(id)) || deleted;
@@ -221,7 +253,12 @@ export class MemoryManager {
   }
 
   async clear(): Promise<void> {
-    await Promise.all([jsonlStore.clear(), sqliteMemory.clear(), markdownMemory as any]);
+    await Promise.all([
+      jsonlStore.clear(),
+      sqliteMemory.clear(),
+      postgresMemory.clear(),
+      markdownMemory as any,
+    ]);
   }
 
   async getStats(): Promise<{
@@ -244,12 +281,23 @@ export class MemoryManager {
       tagsCount: number;
       databaseSize: number;
     };
+    postgres?: {
+      total: number;
+      byType: Record<string, number>;
+      avgImportance: number;
+    };
   }> {
-    return {
+    const stats: any = {
       jsonl: await jsonlStore.getStats(),
       markdown: markdownMemory.getStatus(),
       sqlite: await sqliteMemory.getStats(),
     };
+
+    try {
+      stats.postgres = await postgresMemory.getStats('default');
+    } catch {}
+
+    return stats;
   }
 
   private parseMetadata(metadata: Record<string, unknown>): Record<string, unknown> {

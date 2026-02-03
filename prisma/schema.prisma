@@ -1,0 +1,693 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================
+// AUTHENTICATION & USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String?
+  displayName   String?
+  avatar        String?
+  bio           String?
+  timezone      String    @default("UTC")
+  role          Role      @default(USER)
+  status        UserStatus @default(ACTIVE)
+  
+  emailVerified Boolean   @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions      Session[]
+  apiKeys       ApiKey[]
+  conversations Conversation[]
+  memories      Memory[]
+  workflows     Workflow[]
+  auditLogs     AuditLog[]
+  teamMembers   TeamMember[]
+  ownedTeams    Team[]        @relation("TeamOwner")
+  preferences   UserPreference[]
+  oauthAccounts OAuthAccount[]
+  notifications Notification[]
+  
+  @@index([email])
+  @@index([username])
+}
+
+enum Role {
+  ADMIN
+  USER
+  GUEST
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String?  @unique
+  deviceInfo   String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+model ApiKey {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  keyHash     String      @unique
+  keyPrefix   String
+  scopes      String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([keyHash])
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  tokenType         String?
+  scope             String?
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model UserPreference {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  preferences Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// ============================================
+// TEAMS & COLLABORATION
+// ============================================
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  avatar      String?
+  ownerId     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
+  members     TeamMember[]
+  workspaces  Workspace[]
+  
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String     @id @default(cuid())
+  teamId    String
+  userId    String
+  role      TeamRole   @default(MEMBER)
+  joinedAt  DateTime   @default(now())
+  
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Workspace {
+  id          String        @id @default(cuid())
+  teamId      String
+  name        String
+  description String?
+  settings    Json          @default("{}")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  team        Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  knowledgeBases KnowledgeBase[]
+  
+  @@index([teamId])
+}
+
+// ============================================
+// CONVERSATIONS & MESSAGES
+// ============================================
+
+model Conversation {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String?
+  title       String?
+  summary     String?
+  platform    String    @default("api")
+  metadata    Json      @default("{}")
+  isArchived  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  messages    Message[]
+  sharedLinks ConversationShare[]
+  
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([createdAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  metadata       Json         @default("{}")
+  tokenCount     Int?
+  model          String?
+  toolCalls      Json?
+  parentId       String?
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  parent         Message?     @relation("MessageThread", fields: [parentId], references: [id])
+  replies        Message[]    @relation("MessageThread")
+  
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+model ConversationShare {
+  id             String       @id @default(cuid())
+  conversationId String
+  shareToken     String       @unique
+  expiresAt      DateTime?
+  accessCount    Int          @default(0)
+  createdAt      DateTime     @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@index([shareToken])
+}
+
+// ============================================
+// MEMORY & KNOWLEDGE (with pgvector)
+// ============================================
+
+model Memory {
+  id        String                 @id @default(cuid())
+  userId    String
+  type      MemoryType
+  content   String
+  metadata  Json                   @default("{}")
+  embedding Unsupported("vector(1536)")?
+  tags      String[]
+  importance Float                 @default(0.5)
+  accessCount Int                  @default(0)
+  lastAccessedAt DateTime?
+  expiresAt DateTime?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([type])
+  @@index([tags])
+  @@index([createdAt])
+}
+
+enum MemoryType {
+  FACT
+  PREFERENCE
+  CONTEXT
+  ENTITY
+  SKILL
+  CONVERSATION_SUMMARY
+}
+
+model KnowledgeBase {
+  id          String            @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  settings    Json              @default("{}")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents   KnowledgeDocument[]
+  
+  @@index([workspaceId])
+}
+
+model KnowledgeDocument {
+  id              String        @id @default(cuid())
+  knowledgeBaseId String
+  title           String
+  source          String?
+  sourceType      DocumentSourceType
+  content         String
+  metadata        Json          @default("{}")
+  status          DocumentStatus @default(PENDING)
+  errorMessage    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  chunks          DocumentChunk[]
+  
+  @@index([knowledgeBaseId])
+  @@index([status])
+}
+
+enum DocumentSourceType {
+  FILE_UPLOAD
+  URL
+  TEXT
+  API
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  INDEXED
+  FAILED
+}
+
+model DocumentChunk {
+  id         String                 @id @default(cuid())
+  documentId String
+  index      Int
+  content    String
+  embedding  Unsupported("vector(1536)")?
+  metadata   Json                   @default("{}")
+  createdAt  DateTime               @default(now())
+  
+  document   KnowledgeDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@index([documentId])
+}
+
+// ============================================
+// AGENT & TOOLS
+// ============================================
+
+model AgentPersona {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  systemPrompt String
+  settings    Json     @default("{}")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isDefault])
+}
+
+model Tool {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String
+  schema      Json
+  handler     String
+  category    String?
+  isBuiltin   Boolean    @default(false)
+  isEnabled   Boolean    @default(true)
+  permissions String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  executions  ToolExecution[]
+  
+  @@index([name])
+  @@index([category])
+}
+
+model ToolExecution {
+  id        String   @id @default(cuid())
+  toolId    String
+  input     Json
+  output    Json?
+  status    ExecutionStatus @default(PENDING)
+  error     String?
+  duration  Int?
+  createdAt DateTime @default(now())
+  
+  tool      Tool     @relation(fields: [toolId], references: [id])
+  
+  @@index([toolId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================
+// WORKFLOWS & AUTOMATION
+// ============================================
+
+model Workflow {
+  id          String            @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  nodes       Json
+  edges       Json
+  settings    Json              @default("{}")
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions  WorkflowExecution[]
+  triggers    WorkflowTrigger[]
+  
+  @@index([userId])
+  @@index([isActive])
+}
+
+model WorkflowTrigger {
+  id         String       @id @default(cuid())
+  workflowId String
+  type       TriggerType
+  config     Json
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  
+  workflow   Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId])
+  @@index([type])
+}
+
+enum TriggerType {
+  CRON
+  WEBHOOK
+  EVENT
+  MANUAL
+}
+
+model WorkflowExecution {
+  id         String          @id @default(cuid())
+  workflowId String
+  triggeredBy String?
+  inputs     Json            @default("{}")
+  outputs    Json?
+  status     ExecutionStatus @default(PENDING)
+  error      String?
+  startedAt  DateTime        @default(now())
+  completedAt DateTime?
+  
+  workflow   Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps      WorkflowStep[]
+  
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model WorkflowStep {
+  id          String            @id @default(cuid())
+  executionId String
+  nodeId      String
+  nodeName    String?
+  inputs      Json              @default("{}")
+  outputs     Json?
+  status      ExecutionStatus   @default(PENDING)
+  error       String?
+  startedAt   DateTime          @default(now())
+  completedAt DateTime?
+  
+  execution   WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  
+  @@index([executionId])
+  @@index([nodeId])
+}
+
+// ============================================
+// SCHEDULED TASKS
+// ============================================
+
+model ScheduledTask {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  type        TaskType
+  schedule    Json
+  payload     Json         @default("{}")
+  isActive    Boolean      @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  runs        TaskRun[]
+  
+  @@index([isActive])
+  @@index([nextRunAt])
+}
+
+enum TaskType {
+  CRON
+  INTERVAL
+  ONE_TIME
+}
+
+model TaskRun {
+  id        String       @id @default(cuid())
+  taskId    String
+  status    ExecutionStatus @default(PENDING)
+  output    Json?
+  error     String?
+  duration  Int?
+  startedAt DateTime     @default(now())
+  completedAt DateTime?
+  
+  task      ScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@index([taskId])
+  @@index([startedAt])
+}
+
+// ============================================
+// INTEGRATIONS
+// ============================================
+
+model Integration {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  config      Json
+  credentials Json?
+  isActive    Boolean  @default(true)
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  webhooks    Webhook[]
+  
+  @@index([type])
+  @@index([isActive])
+}
+
+model Webhook {
+  id            String      @id @default(cuid())
+  integrationId String?
+  name          String
+  url           String
+  secret        String?
+  events        String[]
+  isActive      Boolean     @default(true)
+  lastTriggeredAt DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  integration   Integration? @relation(fields: [integrationId], references: [id])
+  deliveries    WebhookDelivery[]
+  
+  @@index([integrationId])
+  @@index([isActive])
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  event      String
+  payload    Json
+  response   Json?
+  statusCode Int?
+  success    Boolean  @default(false)
+  error      String?
+  createdAt  DateTime @default(now())
+  
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  
+  @@index([webhookId])
+  @@index([createdAt])
+}
+
+// ============================================
+// ANALYTICS & USAGE
+// ============================================
+
+model UsageRecord {
+  id           String   @id @default(cuid())
+  userId       String?
+  apiKeyId     String?
+  endpoint     String
+  method       String
+  statusCode   Int
+  tokenCount   Int?
+  cost         Float?
+  duration     Int
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+  @@index([apiKeyId])
+  @@index([createdAt])
+  @@index([endpoint])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  resource    String
+  resourceId  String?
+  details     Json     @default("{}")
+  ipAddress   String?
+  userAgent   String?
+  status      String   @default("success")
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String
+  metadata  Json             @default("{}")
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  TASK_COMPLETED
+  WORKFLOW_TRIGGERED
+  MENTION
+  SHARE
+}
+
+// ============================================
+// PLUGINS / SKILLS
+// ============================================
+
+model Plugin {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  version     String
+  description String?
+  author      String?
+  homepage    String?
+  manifest    Json
+  isInstalled Boolean  @default(false)
+  isEnabled   Boolean  @default(false)
+  settings    Json     @default("{}")
+  installedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([name])
+  @@index([isInstalled])
+}
