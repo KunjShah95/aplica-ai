@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
-import { MessageRole, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { MessageRole } from '../types/prisma-types.js';
 
 export interface CreateConversationInput {
     userId: string;
@@ -44,7 +45,7 @@ export class ConversationService {
                 workspaceId: input.workspaceId,
                 title: input.title,
                 platform: input.platform || 'api',
-                metadata: input.metadata as Prisma.InputJsonValue || {},
+                metadata: input.metadata as any || {},
             },
         });
     }
@@ -112,7 +113,7 @@ export class ConversationService {
             },
         });
 
-        return conversations.map((c) => ({
+        return conversations.map((c: any) => ({
             id: c.id,
             title: c.title,
             summary: c.summary,
@@ -132,9 +133,9 @@ export class ConversationService {
                 content: input.content,
                 model: input.model,
                 tokenCount: input.tokenCount,
-                toolCalls: input.toolCalls as Prisma.InputJsonValue,
+                toolCalls: input.toolCalls as any,
                 parentId: input.parentId,
-                metadata: input.metadata as Prisma.InputJsonValue || {},
+                metadata: input.metadata as any || {},
             },
         });
 
@@ -307,7 +308,7 @@ export class ConversationService {
             },
         });
 
-        return messages.map((m) => ({
+        return messages.map((m: any) => ({
             messageId: m.id,
             conversationId: m.conversation.id,
             conversationTitle: m.conversation.title,

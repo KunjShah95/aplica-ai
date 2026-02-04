@@ -220,7 +220,7 @@ export class LocalCalendarProvider implements CalendarProvider {
             orderBy: { nextRunAt: 'asc' },
         });
 
-        return tasks.map(task => ({
+        return tasks.map((task: any) => ({
             id: task.id,
             title: task.name,
             description: task.description || undefined,

@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
-import { TeamRole, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { TeamRole } from '../types/prisma-types.js';
 
 export interface CreateTeamInput {
     name: string;
@@ -94,7 +95,7 @@ export class TeamService {
             orderBy: { joinedAt: 'desc' },
         });
 
-        return memberships.map((m) => ({
+        return memberships.map((m: any) => ({
             ...m.team,
             role: m.role,
             joinedAt: m.joinedAt,
@@ -178,7 +179,7 @@ export class TeamService {
                 teamId: input.teamId,
                 name: input.name,
                 description: input.description,
-                settings: input.settings as Prisma.InputJsonValue || {},
+                settings: input.settings as any || {},
             },
         });
     }
@@ -211,7 +212,7 @@ export class TeamService {
             where: { id },
             data: {
                 ...data,
-                settings: data.settings as Prisma.InputJsonValue,
+                settings: data.settings as any,
             },
         });
     }

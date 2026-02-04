@@ -1,4 +1,4 @@
-import { Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus } from '../types/prisma-types.js';
 
 export interface AuthUser {
     id: string;

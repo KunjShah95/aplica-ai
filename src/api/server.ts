@@ -6,7 +6,7 @@ import { postgresMemory } from '../memory/postgres.js';
 import { knowledgeBaseService } from '../memory/knowledge-base.js';
 import { teamService } from '../teams/index.js';
 import { analyticsService } from '../analytics/index.js';
-import { MemoryType, MessageRole, DocumentSourceType } from '@prisma/client';
+import { MemoryType, MessageRole, DocumentSourceType } from '../types/prisma-types.js';
 
 interface RequestContext {
     req: IncomingMessage;

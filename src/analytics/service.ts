@@ -41,7 +41,7 @@ export class AnalyticsService {
                 tokenCount: input.tokenCount,
                 cost: input.cost,
                 duration: input.duration,
-                metadata: input.metadata as Prisma.InputJsonValue || {},
+                metadata: input.metadata as any || {},
             },
         });
     }
@@ -89,8 +89,8 @@ export class AnalyticsService {
             totalTokens: aggregate._sum.tokenCount || 0,
             totalCost: aggregate._sum.cost || 0,
             avgDuration: aggregate._avg.duration || 0,
-            byEndpoint: Object.fromEntries(byEndpoint.map((e) => [e.endpoint, e._count])),
-            byStatus: Object.fromEntries(byStatus.map((s) => [s.statusCode.toString(), s._count])),
+            byEndpoint: Object.fromEntries(byEndpoint.map((e: any) => [e.endpoint, e._count])),
+            byStatus: Object.fromEntries(byStatus.map((s: any) => [s.statusCode.toString(), s._count])),
         };
     }
 
@@ -116,7 +116,7 @@ export class AnalyticsService {
       ORDER BY date
     `;
 
-        return results.map((r) => ({
+        return results.map((r: any) => ({
             date: r.date.toISOString(),
             requests: r.requests,
             tokens: r.tokens,
@@ -143,7 +143,7 @@ export class AnalyticsService {
             take: limit,
         });
 
-        return results.map((r) => ({
+        return results.map((r: any) => ({
             endpoint: r.endpoint,
             requests: r._count,
             avgDuration: r._avg.duration || 0,
@@ -195,7 +195,7 @@ export class AnalyticsService {
                 action: data.action,
                 resource: data.resource,
                 resourceId: data.resourceId,
-                details: data.details as Prisma.InputJsonValue || {},
+                details: data.details as any || {},
                 ipAddress: data.ipAddress,
                 userAgent: data.userAgent,
                 status: data.status || 'success',

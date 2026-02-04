@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel
+  namespace: sentinel
+  labels:
+    app: sentinel
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sentinel
+  template:
+    metadata:
+      labels:
+        app: sentinel
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '3000'
+        prometheus.io/path: '/metrics'
+    spec:
+      serviceAccountName: sentinel
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: sentinel
+          image: sentinel:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+            - containerPort: 3001
+            - containerPort: 3002
+          envFrom:
+            - secretRef:
+                name: sentinel-secrets
+            - configMapRef:
+                name: sentinel-config
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1000m'
+            limits:
+              memory: '8Gi'
+              cpu: '4000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sentinel-data
+        - name: logs
+          persistentVolumeClaim:
+            claimName: sentinel-logs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel
+  namespace: sentinel
+spec:
+  selector:
+    app: sentinel
+  ports:
+    - name: api
+      port: 3000
+      targetPort: 3000
+    - name: ws
+      port: 3001
+      targetPort: 3001
+    - name: openai
+      port: 3002
+      targetPort: 3002
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sentinel
+  namespace: sentinel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sentinel
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sentinel
+  namespace: sentinel
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: sentinel

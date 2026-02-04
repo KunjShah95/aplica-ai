@@ -1,11 +1,12 @@
 import OpenAI from 'openai';
 import { EmbeddingProvider } from './postgres.js';
+export type { EmbeddingProvider };
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
 const EMBEDDING_DIMENSIONS = 1536;
 
 export class OpenAIEmbeddings implements EmbeddingProvider {
-    private client: OpenAI;
+    private client: any;
     private model: string;
 
     constructor(apiKey?: string, model?: string) {
@@ -32,7 +33,7 @@ export class OpenAIEmbeddings implements EmbeddingProvider {
             dimensions: EMBEDDING_DIMENSIONS,
         });
 
-        return response.data.map((d) => d.embedding);
+        return response.data.map((d: any) => d.embedding);
     }
 }
 

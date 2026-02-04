@@ -84,7 +84,7 @@ export class HealthService {
             try {
                 const result = await Promise.race([
                     healthCheck.check(),
-                    new Promise<{ healthy: boolean; message: string }>((_, reject) =>
+                    new Promise<{ healthy: boolean; message: string; details?: unknown }>((_, reject) =>
                         setTimeout(() => reject(new Error('Health check timeout')), 5000)
                     ),
                 ]);

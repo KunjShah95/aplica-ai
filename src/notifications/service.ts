@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
-import { NotificationType, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { NotificationType } from '../types/prisma-types.js';
 
 export interface CreateNotificationInput {
     userId: string;
@@ -25,7 +26,7 @@ export class NotificationService {
                 type: input.type,
                 title: input.title,
                 content: input.content,
-                metadata: input.metadata as Prisma.InputJsonValue || {},
+                metadata: input.metadata as any || {},
             },
         });
     }
@@ -37,7 +38,7 @@ export class NotificationService {
                 type: n.type,
                 title: n.title,
                 content: n.content,
-                metadata: n.metadata as Prisma.InputJsonValue || {},
+                metadata: n.metadata as any || {},
             })),
         });
     }

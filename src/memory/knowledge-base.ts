@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
-import { DocumentSourceType, DocumentStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { DocumentSourceType, DocumentStatus } from '../types/prisma-types.js';
 import { EmbeddingProvider } from './embeddings.js';
 
 export interface CreateKnowledgeBaseInput {
@@ -47,7 +48,7 @@ export class KnowledgeBaseService {
                 workspaceId: input.workspaceId,
                 name: input.name,
                 description: input.description,
-                settings: input.settings as Prisma.InputJsonValue || {},
+                settings: input.settings as any || {},
             },
         });
     }
@@ -70,7 +71,7 @@ export class KnowledgeBaseService {
                 content: input.content,
                 source: input.source,
                 sourceType: input.sourceType,
-                metadata: input.metadata as Prisma.InputJsonValue || {},
+                metadata: input.metadata as any || {},
                 status: DocumentStatus.PENDING,
             },
         });
@@ -197,7 +198,7 @@ export class KnowledgeBaseService {
                 take: limit,
             });
 
-            return documents.map((doc) => ({
+            return documents.map((doc: any) => ({
                 documentId: doc.id,
                 chunkId: doc.id,
                 title: doc.title,
@@ -226,7 +227,7 @@ export class KnowledgeBaseService {
       LIMIT ${limit}
     `;
 
-        return results.map((r) => ({
+        return results.map((r: any) => ({
             documentId: r.documentId,
             chunkId: r.chunkId,
             title: r.title,
@@ -264,7 +265,7 @@ export class KnowledgeBaseService {
       LIMIT ${limit}
     `;
 
-        return results.map((r) => ({
+        return results.map((r: any) => ({
             documentId: r.documentId,
             chunkId: r.chunkId,
             title: r.title,
@@ -309,7 +310,7 @@ export class KnowledgeBaseService {
             knowledgeBase: kb,
             documentCount: docCount,
             chunkCount,
-            statusCounts: Object.fromEntries(statusCounts.map((s) => [s.status, s._count])),
+            statusCounts: Object.fromEntries(statusCounts.map((s: any) => [s.status, s._count])),
         };
     }
 }

@@ -99,7 +99,7 @@ export class PluginManager {
                     description: manifest.description,
                     author: manifest.author,
                     homepage: manifest.homepage,
-                    manifest: manifest as unknown as Prisma.InputJsonValue,
+                    manifest: manifest as unknown as any,
                     isInstalled: true,
                     isEnabled: true,
                     installedAt: new Date(),
@@ -107,7 +107,7 @@ export class PluginManager {
                 update: {
                     version: manifest.version,
                     description: manifest.description,
-                    manifest: manifest as unknown as Prisma.InputJsonValue,
+                    manifest: manifest as unknown as any,
                 },
             });
 
@@ -152,7 +152,7 @@ export class PluginManager {
     async updateSettings(name: string, settings: Record<string, unknown>): Promise<void> {
         await db.plugin.update({
             where: { name },
-            data: { settings: settings as Prisma.InputJsonValue },
+            data: { settings: settings as any },
         });
     }
 
