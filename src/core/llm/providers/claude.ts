@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LLMProvider, LLMMessage, LLMCompletionResult, LLMCompletionOptions } from '../index';
+import { LLMProvider, LLMMessage, LLMCompletionResult, LLMCompletionOptions } from '../base.js';
 import { LLMConfig } from '../../../config/types';
 
 export class ClaudeProvider extends LLMProvider {

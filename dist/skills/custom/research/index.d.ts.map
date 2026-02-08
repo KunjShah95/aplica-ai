@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/skills/custom/research/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,KAAK,EAAE,qBAAqB,EAAE,WAAW,EAAE,MAAM,iBAAiB,CAAC;AAK5E,eAAO,MAAM,QAAQ,EAAE,KAAK,CAAC,UAAU,CA4BtC,CAAC;AAEF,qBAAa,iBAAkB,YAAW,KAAK;IAC3C,QAAQ,0CAAY;IAEd,OAAO,CAAC,OAAO,EAAE,qBAAqB,GAAG,OAAO,CAAC,WAAW,CAAC;CA6GtE"}

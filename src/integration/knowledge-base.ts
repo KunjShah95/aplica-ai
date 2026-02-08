@@ -22,7 +22,7 @@ export interface AddDocumentInput {
   title: string;
   content: string;
   source?: string;
-  sourceType?: 'TEXT' | 'FILE' | 'URL' | 'API';
+  sourceType?: 'TEXT' | 'FILE_UPLOAD' | 'URL' | 'API';
   metadata?: Record<string, unknown>;
 }
 
@@ -48,8 +48,7 @@ export class KnowledgeBaseService {
   async create(input: CreateKnowledgeBaseInput): Promise<any> {
     const knowledgeBase = await db.knowledgeBase.create({
       data: {
-        userId: input.userId,
-        workspaceId: input.workspaceId,
+        workspaceId: input.workspaceId || '',
         name: input.name,
         description: input.description,
         settings: input.settings || {},
@@ -83,7 +82,6 @@ export class KnowledgeBaseService {
   async listByUser(userId: string, workspaceId?: string): Promise<any[]> {
     return db.knowledgeBase.findMany({
       where: {
-        userId,
         ...(workspaceId && { workspaceId }),
       },
       include: {
@@ -119,7 +117,7 @@ export class KnowledgeBaseService {
         content: input.content,
         source: input.source,
         sourceType: input.sourceType || 'TEXT',
-        metadata: input.metadata || {},
+        metadata: (input.metadata || {}) as any,
         status: 'PENDING',
       },
     });
@@ -145,12 +143,11 @@ export class KnowledgeBaseService {
             documentId: document.id,
             index,
             content: chunk,
-            embedding: embedding ? `[${embedding.join(',')}]` : null,
             metadata: {
               chunkIndex: index,
               totalChunks: chunks.length,
               ...(input.metadata || {}),
-            },
+            } as any,
           },
         });
       })
@@ -245,7 +242,7 @@ export class KnowledgeBaseService {
 
     const chunks = await db.$queryRawUnsafe(query, ...params);
 
-    const filteredChunks = chunks.filter(
+    const filteredChunks = (chunks as any[]).filter(
       (c: any) => (c.similarity || 0) >= (input.minSimilarity || 0.5)
     );
 

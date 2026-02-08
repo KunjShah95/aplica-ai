@@ -1,8 +1,8 @@
-# SentinelBot - Open-Source AI Personal Assistant
+# Alpicia - Open-Source AI Personal Assistant
 
 <div align="center">
 
-![SentinelBot](https://img.shields.io/badge/SentinelBot-AI%20Assistant-blue?style=for-the-badge)
+![Alpicia](https://img.shields.io/badge/Alpicia-AI%20Assistant-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue?style=for-the-badge)
 ![Node.js](https://img.shields.io/badge/Node.js-20+-green?style=for-the-badge)
@@ -17,9 +17,9 @@
 
 ## 🎯 Overview
 
-SentinelBot is an open-source AI personal assistant inspired by OpenClaw (formerly Clawdbot/Moltbot) that gained massive popularity for its ability to autonomously control computers, execute tasks, and interact across multiple messaging platforms.
+Alpicia is an open-source AI personal assistant inspired by OpenClaw (formerly Clawdbot/Moltbot) that gained massive popularity for its ability to autonomously control computers, execute tasks, and interact across multiple messaging platforms.
 
-### What Makes SentinelBot Different
+### What Makes Alpicia Different
 
 - **🔒 Privacy-First**: Runs locally with optional self-hosted components
 - **🌐 Multi-Platform**: Telegram, Discord, WebSocket, and CLI support
@@ -72,8 +72,8 @@ SentinelBot is an open-source AI personal assistant inspired by OpenClaw (former
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/sentinelbot.git
-cd sentinelbot
+git clone https://github.com/yourusername/alpicia.git
+cd alpicia
 
 # Install dependencies
 npm install
@@ -137,7 +137,7 @@ SCHEDULER_ENABLED=true
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      SentinelBot System                         │
+│                      Alpicia System                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  User Interface Layer                                            │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐           │
@@ -479,7 +479,7 @@ await openaiApi.start();
 ## 📁 Project Structure
 
 ```
-sentinelbot/
+alpicia/
 ├── src/
 │   ├── api/              # API endpoints
 │   ├── agents/           # Multi-agent framework
@@ -588,7 +588,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Good First Issues
 
-Looking for a place to start? Check our [Good First Issues](https://github.com/yourusername/sentinelbot/issues?q=label%3A%22good+first+issue%22).
+Looking for a place to start? Check our [Good First Issues](https://github.com/yourusername/alpicia/issues?q=label%3A%22good+first+issue%22).
 
 ---
 
@@ -664,8 +664,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ by the SentinelBot Community**
+**Built with ❤️ by the Alpicia Community**
 
-[Website](https://sentinelbot.dev) • [GitHub](https://github.com/yourusername/sentinelbot) • [Discord](https://discord.gg/sentinelbot)
+[Website](https://alpicia.dev) • [GitHub](https://github.com/yourusername/alpicia) • [Discord](https://discord.gg/alpicia)
 
 </div>

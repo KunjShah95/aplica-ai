@@ -1,4 +1,4 @@
-# SentinelBot Deployment Guide
+# Alpicia Deployment Guide
 
 ## Quick Start with Docker
 
@@ -11,7 +11,7 @@
 
 ```bash
 git clone <your-repo-url>
-cd sentinelbot
+cd alpicia
 ```
 
 ### 2. Configure Environment
@@ -98,7 +98,7 @@ npm run dev
 ### Required
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/sentinelbot"
+DATABASE_URL="postgresql://user:password@localhost:5432/alpicia"
 REDIS_URL="redis://localhost:6379"
 JWT_SECRET="your-secret-key"
 LLM_PROVIDER=claude
@@ -151,7 +151,7 @@ DEFAULT_VOICE=alloy
 npm install -g pm2
 
 # Start with PM2
-pm2 start dist/index.js --name sentinelbot
+pm2 start dist/index.js --name alpicia
 
 # Setup auto-restart
 pm2 startup
@@ -164,13 +164,13 @@ Create `/etc/systemd/system/sentinelbot.service`:
 
 ```ini
 [Unit]
-Description=SentinelBot AI Assistant
+Description=Alpicia AI Assistant
 After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=simple
-User=sentinelbot
-WorkingDirectory=/opt/sentinelbot
+User=alpicia
+WorkingDirectory=/opt/alpicia
 ExecStart=/usr/bin/node dist/index.js
 Restart=always
 Environment=NODE_ENV=production
@@ -210,10 +210,10 @@ server {
 curl http://localhost:3000/health
 
 # Check database connection
-docker exec -it sentinelbot-postgres psql -U sentinelbot -d sentinelbot -c "SELECT 1"
+docker exec -it alpicia-postgres psql -U alpicia -d alpicia -c "SELECT 1"
 
 # Check Redis
-docker exec -it sentinelbot-redis redis-cli ping
+docker exec -it alpicia-redis redis-cli ping
 ```
 
 ## Troubleshooting
@@ -222,10 +222,10 @@ docker exec -it sentinelbot-redis redis-cli ping
 
 ```bash
 # Check PostgreSQL logs
-docker logs sentinelbot-postgres
+docker logs alpicia-postgres
 
 # Verify connection
-docker exec -it sentinelbot-postgres psql -U sentinelbot
+docker exec -it alpicia-postgres psql -U alpicia
 ```
 
 ### Memory Issues
@@ -239,7 +239,7 @@ NODE_OPTIONS="--max-old-space-size=4096" npm start
 
 ```bash
 # Docker logs
-docker-compose logs -f sentinelbot
+docker-compose logs -f alpicia
 
 # Application logs
 tail -f logs/app.log
@@ -252,7 +252,7 @@ tail -f logs/app.log
 ```yaml
 # docker-compose.scaling.yml
 services:
-  sentinelbot:
+  alpicia:
     deploy:
       replicas: 3
     depends_on:
@@ -263,10 +263,10 @@ services:
 ### Load Balancer Configuration
 
 ```nginx
-upstream sentinelbot {
-    server sentinelbot:3000;
-    server sentinelbot:3000;
-    server sentinelbot:3000;
+upstream alpicia {
+    server alpicia:3000;
+    server alpicia:3000;
+    server alpicia:3000;
 }
 ```
 

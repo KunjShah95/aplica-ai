@@ -502,7 +502,12 @@ model ScheduledTask {
   type        TaskType
   schedule    Json
   payload     Json         @default("{}")
+  workflowId  String?
   isActive    Boolean      @default(true)
+  isEnabled   Boolean      @default(true)
+  runCount    Int          @default(0)
+  failCount   Int          @default(0)
+  maxRetries  Int          @default(3)
   lastRunAt   DateTime?
   nextRunAt   DateTime?
   createdAt   DateTime     @default(now())
@@ -511,12 +516,14 @@ model ScheduledTask {
   runs        TaskRun[]
   
   @@index([isActive])
+  @@index([isEnabled])
   @@index([nextRunAt])
 }
 
 enum TaskType {
   CRON
   INTERVAL
+  RECURRING
   ONE_TIME
 }
 

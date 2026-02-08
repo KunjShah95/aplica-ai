@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import type { RedisOptions, ClusterNode } from 'ioredis';
 import { EventEmitter } from 'events';
 
 export interface RedisConfig {
@@ -8,8 +9,8 @@ export interface RedisConfig {
   db?: number;
   keyPrefix?: string;
   cluster?: {
-    nodes: Array<{ host: string; port: number }>;
-    readWrite?: 'yes' | 'no';
+    nodes: ClusterNode[];
+    readWrite?: 'slave' | 'master';
   };
   sentinel?: {
     masterName: string;
@@ -43,10 +44,10 @@ export interface RateLimitInfo {
 }
 
 export class RedisStore extends EventEmitter {
-  private client: Redis;
+  private client: InstanceType<typeof Redis> | InstanceType<typeof Redis.Cluster>;
   private keyPrefix: string;
   private defaultTTL: number;
-  private isConnected: boolean;
+  private isConnected: boolean = false;
 
   constructor(config: RedisConfig = {}) {
     super();
@@ -376,7 +377,7 @@ export class RedisStore extends EventEmitter {
     const lockTTL = Math.ceil(ttlMs / 1000);
 
     for (let i = 0; i < maxRetries; i++) {
-      const acquired = await this.client.set(lockKey, lockValue, 'NX', 'EX', lockTTL);
+      const acquired = await this.client.set(lockKey, lockValue, 'EX', lockTTL, 'NX');
       if (acquired === 'OK') {
         return lockValue;
       }
@@ -412,5 +413,3 @@ export class RedisStore extends EventEmitter {
     console.log('Redis connection closed');
   }
 }
-
-export { RedisStore };

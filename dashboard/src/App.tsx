@@ -18,7 +18,7 @@ function Dashboard() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <span className="text-xl font-bold text-primary-600">SentinelBot</span>
+              <span className="text-xl font-bold text-primary-600">Alpicia</span>
             </div>
             <div className="flex items-center space-x-4">
               <NavLink

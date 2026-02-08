@@ -22,9 +22,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/.env.example ./.env.example
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 sentinelbot
+RUN adduser --system --uid 1001 alpicia
 
-USER sentinelbot
+USER alpicia
 
 EXPOSE 3000 3001 3002
 

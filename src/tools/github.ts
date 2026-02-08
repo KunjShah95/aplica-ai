@@ -115,9 +115,18 @@ export class GitHubTool {
   private repo: string = '';
 
   constructor(config: GitHubConfig) {
-    const ThrottledOctokit = throttling(Octokit);
+    const ThrottledOctokit = throttling(Octokit as any, {
+      onRateLimit: (retryAfter: number, options: Record<string, unknown>) => {
+        console.warn(`Rate limit exceeded, retrying in ${retryAfter}s`);
+        return true;
+      },
+      onAbuseLimit: (retryAfter: number, options: Record<string, unknown>) => {
+        console.warn(`Abuse limit detected, retrying in ${retryAfter}s`);
+        return true;
+      },
+    });
 
-    this.octokit = new ThrottledOctokit({
+    this.octokit = new (ThrottledOctokit as any)({
       auth: config.token,
       authStrategy:
         config.appId && config.privateKey && config.installationID
@@ -125,15 +134,15 @@ export class GitHubTool {
               appId: config.appId,
               privateKey: config.privateKey,
               installationID: config.installationID,
-            })
+            } as any)
           : undefined,
       throttle: config.throttle?.enabled
         ? {
-            onRateLimit: (retryAfter, options) => {
+            onRateLimit: (retryAfter: number, options: Record<string, unknown>) => {
               console.warn(`Rate limit exceeded, retrying in ${retryAfter}s`);
               return true;
             },
-            onAbuseLimit: (retryAfter, options) => {
+            onAbuseLimit: (retryAfter: number, options: Record<string, unknown>) => {
               console.warn(`Abuse limit detected, retrying in ${retryAfter}s`);
               return true;
             },
@@ -207,7 +216,7 @@ export class GitHubTool {
             name: (label as any).name,
             color: (label as any).color,
           })),
-          assignees: issue.assignees.map((user) => ({
+          assignees: (issue.assignees || []).map((user) => ({
             login: user.login || '',
             avatarUrl: user.avatar_url || '',
           })),
@@ -268,9 +277,9 @@ export class GitHubTool {
       await this.octokit.issues.update({
         owner: this.owner,
         repo: this.repo,
-        issueNumber: number,
+        issue_number: number,
         state: 'closed',
-      });
+      } as any);
       return true;
     } catch (error) {
       console.error('Failed to close issue:', error);
@@ -283,9 +292,9 @@ export class GitHubTool {
       await this.octokit.issues.createComment({
         owner: this.owner,
         repo: this.repo,
-        issueNumber,
+        issue_number: issueNumber,
         body,
-      });
+      } as any);
       return true;
     } catch (error) {
       console.error('Failed to add comment:', error);
@@ -324,10 +333,10 @@ export class GitHubTool {
           sha: pr.base.sha,
         },
         draft: pr.draft || false,
-        mergeable: pr.mergeable,
-        additions: pr.additions || 0,
-        deletions: pr.deletions || 0,
-        changedFiles: pr.changed_files || 0,
+        mergeable: (pr as any).mergeable || false,
+        additions: (pr as any).additions || 0,
+        deletions: (pr as any).deletions || 0,
+        changedFiles: (pr as any).changed_files || 0,
         htmlUrl: pr.html_url || '',
         createdAt: pr.created_at || '',
         updatedAt: pr.updated_at || '',
@@ -344,8 +353,8 @@ export class GitHubTool {
       const { data } = await this.octokit.pulls.get({
         owner: this.owner,
         repo: this.repo,
-        pullNumber: number,
-      });
+        pull_number: number,
+      } as any);
 
       return {
         id: data.id,
@@ -389,9 +398,9 @@ export class GitHubTool {
       await this.octokit.pulls.merge({
         owner: this.owner,
         repo: this.repo,
-        pullNumber: number,
-        mergeMethod: method,
-      });
+        pull_number: number,
+        merge_method: method,
+      } as any);
       return true;
     } catch (error) {
       console.error('Failed to merge pull request:', error);
@@ -689,5 +698,3 @@ export class GitHubTool {
     }
   }
 }
-
-export { GitHubTool };

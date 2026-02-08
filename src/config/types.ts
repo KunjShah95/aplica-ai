@@ -67,6 +67,12 @@ export interface MessagingConfig {
     enabled: boolean;
     port: number;
   };
+  slack?: {
+    enabled: boolean;
+    token: string;
+    signingSecret?: string;
+    appToken?: string;
+  };
 }
 
 export interface MemoryConfig {

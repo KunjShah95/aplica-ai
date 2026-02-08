@@ -251,22 +251,22 @@ export class OpenAIEndpoint {
         object: 'list',
         data: [
           {
-            id: 'sentinel-claude',
+            id: 'alpicia-claude',
             object: 'model',
             created: Math.floor(Date.now() / 1000),
-            owned_by: 'sentinelbot',
+            owned_by: 'alpicia',
           },
           {
-            id: 'sentinel Sonnet',
+            id: 'alpicia Sonnet',
             object: 'model',
             created: Math.floor(Date.now() / 1000),
-            owned_by: 'sentinelbot',
+            owned_by: 'alpicia',
           },
           {
-            id: 'sentinel-haiku',
+            id: 'alpicia-haiku',
             object: 'model',
             created: Math.floor(Date.now() / 1000),
-            owned_by: 'sentinelbot',
+            owned_by: 'alpicia',
           },
         ],
       })

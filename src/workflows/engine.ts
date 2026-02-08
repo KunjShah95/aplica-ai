@@ -1,9 +1,12 @@
 import { db } from '../db/index.js';
 import { webhookService } from '../integrations/webhooks.js';
 import { notificationService } from '../notifications/service.js';
+import { toolRegistry } from '../agents/index.js';
+import { configLoader } from '../config/loader.js';
+import { createProvider } from '../core/llm/index.js';
 
-export type TriggerType = 'MANUAL' | 'SCHEDULE' | 'WEBHOOK' | 'EVENT' | 'KEYWORD';
-export type StepType = 'LLM_PROMPT' | 'HTTP_REQUEST' | 'CODE_EXECUTION' | 'CONDITIONAL' | 'DELAY' | 'NOTIFICATION' | 'MEMORY_OPERATION';
+export type TriggerType = 'MANUAL' | 'CRON' | 'WEBHOOK' | 'EVENT';
+export type StepType = 'LLM_PROMPT' | 'HTTP_REQUEST' | 'CODE_EXECUTION' | 'TOOL_EXECUTION' | 'CONDITIONAL' | 'DELAY' | 'NOTIFICATION' | 'MEMORY_OPERATION';
 export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface WorkflowDefinition {
@@ -131,6 +134,50 @@ export class WorkflowEngine {
                     throw new Error(`Unknown memory operation: ${operation}`);
             }
         });
+
+        this.registerHandler('LLM_PROMPT', async (step, context) => {
+            const config = await configLoader.load();
+            const provider = createProvider(config.llm);
+
+            const systemPrompt = step.config.systemPrompt ? this.interpolate(step.config.systemPrompt as string, context) : 'You are a helpful assistant.';
+            const userPrompt = this.interpolate(step.config.prompt as string, context);
+
+            const result = await provider.complete([
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ], {
+                temperature: step.config.temperature as number || 0.7,
+                maxTokens: step.config.maxTokens as number || 1000
+            });
+
+            return {
+                content: result.content,
+                tokensUsed: result.tokensUsed
+            };
+        });
+
+        this.registerHandler('TOOL_EXECUTION', async (step, context) => {
+            const toolName = step.config.tool as string;
+            if (!toolName) throw new Error('Tool name required');
+
+            const tools = await toolRegistry.list();
+            const tool = tools.find(t => t.name === toolName);
+            if (!tool) throw new Error(`Tool not found: ${toolName}`);
+
+            const input = this.interpolateObject(step.config.input as Record<string, unknown>, context);
+
+            const result = await toolRegistry.execute({
+                toolId: tool.id,
+                input,
+                userId: context.variables.userId as string // Pass userId from context variables
+            });
+
+            if (result.status === 'FAILED') {
+                throw new Error(result.error || 'Tool execution failed');
+            }
+
+            return result.output;
+        });
     }
 
     registerHandler(type: StepType, handler: StepHandler): void {
@@ -145,15 +192,16 @@ export class WorkflowEngine {
             data: {
                 name: definition.name,
                 description: definition.description,
-                steps: definition.steps,
-                variables: definition.variables || {},
-                isEnabled: definition.isEnabled ?? true,
+                nodes: definition.steps as any,
+                edges: [],
+                settings: (definition.variables || {}) as any,
+                isActive: definition.isEnabled ?? true,
                 userId,
                 triggers: {
                     create: definition.triggers.map(t => ({
-                        type: t.type,
-                        config: t.config,
-                        isEnabled: true,
+                        type: t.type as any,
+                        config: t.config as any,
+                        isActive: true,
                     })),
                 },
             },
@@ -175,7 +223,7 @@ export class WorkflowEngine {
             throw new Error(`Workflow not found: ${workflowId}`);
         }
 
-        if (!workflow.isEnabled) {
+        if (!workflow.isActive) {
             throw new Error('Workflow is disabled');
         }
 
@@ -184,6 +232,7 @@ export class WorkflowEngine {
                 workflowId,
                 status: 'RUNNING',
                 startedAt: new Date(),
+                inputs: (triggerPayload || {}) as any,
             },
         });
 
@@ -191,7 +240,7 @@ export class WorkflowEngine {
             workflowId,
             executionId: execution.id,
             triggerPayload,
-            variables: workflow.variables as Record<string, unknown> || {},
+            variables: (workflow.settings as Record<string, unknown>) || {},
             stepResults: {},
         };
 
@@ -205,7 +254,7 @@ export class WorkflowEngine {
         executionId: string,
         context: ExecutionContext
     ): Promise<void> {
-        const steps = workflow.steps as StepDefinition[];
+        const steps = workflow.nodes as StepDefinition[];
         let currentStepId = steps[0]?.id;
         let status: ExecutionStatus = 'COMPLETED';
         let error: string | undefined;
@@ -218,10 +267,11 @@ export class WorkflowEngine {
                 const stepRecord = await db.workflowStep.create({
                     data: {
                         executionId,
-                        stepId: step.id,
-                        name: step.name,
+                        nodeId: step.id,
+                        nodeName: step.name,
                         status: 'RUNNING',
                         startedAt: new Date(),
+                        inputs: step.config as any
                     },
                 });
 
@@ -234,7 +284,7 @@ export class WorkflowEngine {
                         data: {
                             status: 'COMPLETED',
                             completedAt: new Date(),
-                            output: result as any,
+                            outputs: result as any,
                         },
                     });
 
@@ -269,13 +319,8 @@ export class WorkflowEngine {
                 status,
                 completedAt: new Date(),
                 error,
-                output: context.stepResults,
+                outputs: context.stepResults as any,
             },
-        });
-
-        await db.workflow.update({
-            where: { id: workflow.id },
-            data: { lastRunAt: new Date() },
         });
     }
 
@@ -311,7 +356,9 @@ export class WorkflowEngine {
     private interpolate(template: string, context: ExecutionContext): string {
         return template.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
             const value = this.getNestedValue(context, path.trim());
-            return value !== undefined ? String(value) : '';
+            if (value === undefined) return '';
+            if (typeof value === 'object') return JSON.stringify(value, null, 2);
+            return String(value);
         });
     }
 

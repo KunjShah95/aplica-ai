@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import type { RedisOptions } from 'ioredis';
 
 export interface CacheConfig {
   url?: string;
@@ -35,7 +36,7 @@ export class RedisCache {
   }
 
   async connect(): Promise<void> {
-    const options: Redis.RedisOptions = {
+    const options: any = {
       maxRetriesPerRequest: this.config.maxRetriesPerRequest ?? 3,
       enableReadyCheck: this.config.enableReadyCheck ?? true,
       lazyConnect: this.config.lazyConnect ?? false,
@@ -51,7 +52,13 @@ export class RedisCache {
     }
 
     this.client = new Redis(options);
-    await this.client.connect();
+
+    // ioredis auto-connects unless lazyConnect is true
+    // Wait for ready event to confirm connection
+    await new Promise<void>((resolve, reject) => {
+      this.client!.once('ready', () => resolve());
+      this.client!.once('error', (err) => reject(err));
+    });
     console.log('Redis connected successfully');
   }
 
@@ -246,7 +253,7 @@ export class RedisCache {
       args.push('LIMIT', options.offset, options.count);
     }
 
-    const result = await this.client.zrangebyscore(...args);
+    const result = await (this.client as any).zrangebyscore(...(args as [string, ...unknown[]]));
 
     if (options?.withScores) {
       const parsed: T[] = [];
@@ -266,7 +273,7 @@ export class RedisCache {
       return parsed;
     }
 
-    return result.map((v) => {
+    return result.map((v: string) => {
       try {
         return JSON.parse(v) as T;
       } catch {

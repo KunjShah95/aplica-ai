@@ -94,10 +94,10 @@ export class TeamsService {
       }
     );
 
-    const data = await response.json();
-    this.config.accessToken = data.access_token;
+    const data = (await response.json()) as { access_token?: string };
+    this.config.accessToken = data.access_token || '';
     this.initClient();
-    return data.access_token;
+    return data.access_token || '';
   }
 
   async listTeams(): Promise<TeamsTeam[]> {

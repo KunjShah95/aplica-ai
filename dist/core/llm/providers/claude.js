@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LLMProvider } from '../index';
+import { LLMProvider } from '../base.js';
 export class ClaudeProvider extends LLMProvider {
     client;
     constructor(config) {

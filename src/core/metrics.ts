@@ -25,11 +25,12 @@ export class MetricsService {
 
   constructor(config: MetricsConfig = {}) {
     this.registry = new Registry();
-    this.prefix = config.prefix || 'sentinelbot';
+    this.prefix = config.prefix || 'alpicia';
     this.registry.setDefaultLabels(config.defaultLabels || {});
 
-    this.registry.collectDefaultMetrics({
+    client.collectDefaultMetrics({
       prefix: `${this.prefix}_`,
+      register: this.registry,
     });
 
     this.initializeDefaultMetrics();
@@ -218,13 +219,13 @@ export class MetricsService {
     }
   }
 
-  async getMetrics(contentType: RegistryContentType = 'text/plain'): Promise<string> {
-    return this.registry.metrics(contentType);
+  async getMetrics(): Promise<string> {
+    return this.registry.metrics();
   }
 
   async getMetricsJSON(): Promise<Record<string, any>> {
     const metrics: Record<string, any> = {};
-    const content = await this.registry.metrics('application/json');
+    const content = await this.registry.metrics();
     const parsed = JSON.parse(content);
 
     for (const metric of parsed) {
@@ -242,7 +243,7 @@ export class MetricsService {
   }
 
   async getSingleMetric(name: string): Promise<Record<string, any> | null> {
-    const content = await this.registry.metrics('application/json');
+    const content = await this.registry.metrics();
     const parsed = JSON.parse(content);
     return parsed.find((m: any) => m.name === `${this.prefix}_${name}`) || null;
   }
@@ -266,18 +267,12 @@ export class MetricsService {
     this.registry.removeSingleMetric(`${this.prefix}_${name}`);
   }
 
-  removeMatching(regex: RegExp): void {
-    this.registry.removeMatching(regex);
-  }
 
-  async registerExternalMetrics(metrics: client.Collector[]): Promise<void> {
-    for (const metric of metrics) {
-      this.registry.registerCollector(metric);
-    }
-  }
 
-  getContentType(): RegistryContentType {
-    return 'text/plain';
+
+
+  getContentType(): string {
+    return this.registry.contentType;
   }
 
   getRegistry(): Registry {

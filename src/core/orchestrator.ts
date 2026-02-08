@@ -2,6 +2,8 @@ import { toolRegistry } from '../agents/tools.js';
 import { postgresMemory } from '../memory/postgres.js';
 import { knowledgeBaseService } from '../memory/knowledge-base.js';
 import { personaService } from '../agents/persona.js';
+import { ConstitutionalAI } from './security/constitutional.js';
+import { ApprovalManager } from './security/approval.js';
 
 export interface AgentMessage {
     role: 'system' | 'user' | 'assistant' | 'tool';
@@ -70,6 +72,16 @@ export class AgentOrchestrator {
 
         messages.push({ role: 'user', content: userMessage });
 
+        // CONSTITUTIONAL PRE-CHECK (Faster)
+        const safety = await ConstitutionalAI.validateInput(userMessage);
+        if (!safety.safe) {
+            return {
+                response: `[Safety Refusal] ${safety.reason}`,
+                iterations: 0,
+                toolsUsed: [],
+            };
+        }
+
         while (iterations < (config.maxIterations || this.maxIterations)) {
             iterations++;
 
@@ -109,9 +121,40 @@ export class AgentOrchestrator {
                         continue;
                     }
 
+                    // CONSTITUTIONAL TOOL CHECK (Safer)
+                    const toolSafe = await ConstitutionalAI.validateToolUsage(tool.name, toolCall.arguments, config);
+                    if (!toolSafe.safe) {
+                        messages.push({
+                            role: 'tool',
+                            name: toolCall.name,
+                            toolCallId: toolCall.id,
+                            content: `Error: Tool usage blocked by safety policy: ${toolSafe.reason}`,
+                        });
+                        continue;
+                    }
+
+                    // APPROVAL CHECK (Secure)
+                    if (tool.name === 'run_shell' || tool.name === 'delete_file') {
+                        // For demonstration, map 'HIGH' risk to these actions
+                        const approval = await ApprovalManager.request(config.userId, `Execute ${tool.name}`, toolCall.arguments, 'HIGH');
+
+                        // In this mock, 'HIGH' defaults to DENIED or PENDING unless auto-approved.
+                        // We check if it is explicitly approved.
+                        if (approval.status !== 'APPROVED' && approval.status !== 'AUTO_APPROVED') {
+                            messages.push({
+                                role: 'tool',
+                                name: toolCall.name,
+                                toolCallId: toolCall.id,
+                                content: `Error: User approval required and not granted for high-risk action.`,
+                            });
+                            continue;
+                        }
+                    }
+
                     const result = await toolRegistry.execute({
                         toolId: tool.id,
                         input: toolCall.arguments,
+                        userId: config.userId,
                     });
 
                     messages.push({
@@ -200,6 +243,7 @@ export class AgentOrchestrator {
                     const result = await toolRegistry.execute({
                         toolId: tool.id,
                         input: toolCall.arguments,
+                        userId: config.userId,
                     });
 
                     messages.push({
@@ -239,6 +283,7 @@ export class AgentOrchestrator {
         }
 
         const enabledTools = await toolRegistry.getEnabled();
+        console.log(`[Orchestrator] Active Tools: ${enabledTools.map(t => t.name).join(', ')}`);
         if (enabledTools.length > 0) {
             prompt += '\n\nYou have access to the following tools:\n';
             for (const tool of enabledTools) {

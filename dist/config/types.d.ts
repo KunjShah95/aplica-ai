@@ -62,12 +62,27 @@ export interface MessagingConfig {
         enabled: boolean;
         port: number;
     };
+    slack?: {
+        enabled: boolean;
+        token: string;
+        signingSecret?: string;
+        appToken?: string;
+    };
 }
 export interface MemoryConfig {
-    type: 'jsonl' | 'sqlite' | 'vector';
+    type: 'jsonl' | 'sqlite' | 'postgres';
     path: string;
     maxEntries: number;
     searchEnabled: boolean;
+    postgres?: {
+        host?: string;
+        port?: number;
+        database?: string;
+        user?: string;
+        password?: string;
+        tablePrefix?: string;
+        enableVector?: boolean;
+    };
 }
 export interface SecurityConfig {
     sandboxEnabled: boolean;

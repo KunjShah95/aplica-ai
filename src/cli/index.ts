@@ -22,7 +22,7 @@ export async function startCLI(config: AppConfig): Promise<void> {
     prompt: '> '
   });
 
-  console.log('SentinelBot ready!');
+  console.log('Alpicia ready!');
   console.log("Type 'help' for available commands.\n");
   rl.prompt();
 
@@ -64,14 +64,14 @@ export async function startCLI(config: AppConfig): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log('\nSentinelBot CLI');
+  console.log('\nAlpicia CLI');
   console.log('Loading configuration...\n');
 
   try {
     const config = await configLoader.load();
     await startCLI(config);
   } catch (error) {
-    console.error('Error starting SentinelBot:', error instanceof Error ? error.message : String(error));
+    console.error('Error starting Alpicia:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

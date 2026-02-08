@@ -1,6 +1,6 @@
-# Contributing to SentinelBot
+# Contributing to Alpicia
 
-Thank you for your interest in contributing to SentinelBot! This guide will help you get started.
+Thank you for your interest in contributing to Alpicia! This guide will help you get started.
 
 ## Table of Contents
 
@@ -33,8 +33,8 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
    ```bash
    # Click "Fork" on GitHub, then:
-   git clone https://github.com/YOUR-USERNAME/sentinelbot.git
-   cd sentinelbot
+   git clone https://github.com/YOUR-USERNAME/alpicia.git
+   cd alpicia
    ```
 
 2. **Install dependencies**
@@ -57,9 +57,9 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 ### Finding Issues to Work On
 
-- **Good First Issues**: [GitHub Issues labeled `good first issue`](https://github.com/yourusername/sentinelbot/issues?q=label%3A%22good+first+issue%22)
-- **Feature Requests**: [GitHub Issues labeled `enhancement`](https://github.com/yourusername/sentinelbot/issues?q=label%3A%22enhancement%22)
-- **Bug Fixes**: [GitHub Issues labeled `bug`](https://github.com/yourusername/sentinelbot/issues?q=label%3A%22bug%22)
+- **Good First Issues**: [GitHub Issues labeled `good first issue`](https://github.com/yourusername/alpicia/issues?q=label%3A%22good+first+issue%22)
+- **Feature Requests**: [GitHub Issues labeled `enhancement`](https://github.com/yourusername/alpicia/issues?q=label%3A%22enhancement%22)
+- **Bug Fixes**: [GitHub Issues labeled `bug`](https://github.com/yourusername/alpicia/issues?q=label%3A%22bug%22)
 
 ## Development Process
 
@@ -330,9 +330,9 @@ Brief description of what was changed
 
 ### Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/sentinelbot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/sentinelbot/discussions)
-- **Discord**: [Join our Discord](https://discord.gg/sentinelbot)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/alpicia/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/alpicia/discussions)
+- **Discord**: [Join our Discord](https://discord.gg/alpicia)
 
 ### Recognition
 
@@ -344,4 +344,4 @@ Contributors are recognized in:
 
 ---
 
-**Thank you for contributing to SentinelBot!**
+**Thank you for contributing to Alpicia!**

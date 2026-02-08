@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/skills/custom/delegate/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,KAAK,EAAE,qBAAqB,EAAE,WAAW,EAAE,MAAM,iBAAiB,CAAC;AAK5E,eAAO,MAAM,QAAQ,EAAE,KAAK,CAAC,UAAU,CA+BtC,CAAC;AAEF,qBAAa,aAAc,YAAW,KAAK;IACzC,QAAQ,0CAAY;IAEd,OAAO,CAAC,OAAO,EAAE,qBAAqB,GAAG,OAAO,CAAC,WAAW,CAAC;CAqEpE"}

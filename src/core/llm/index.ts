@@ -1,44 +1,22 @@
-import { LLMConfig } from '../../config/types';
+import { LLMConfig } from '../../config/types.js';
 import { ClaudeProvider } from './providers/claude.js';
+import { LLMProvider } from './base.js';
 
-export interface LLMMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+export { LLMProvider } from './base.js';
+export type { LLMMessage, LLMCompletionResult, LLMCompletionOptions } from './base.js';
 
-export interface LLMCompletionOptions {
-  maxTokens?: number;
-  temperature?: number;
-  systemPrompt?: string;
-}
-
-export interface LLMCompletionResult {
-  content: string;
-  tokensUsed: number;
-  model: string;
-}
-
-export abstract class LLMProvider {
-  protected config: LLMConfig;
-
-  constructor(config: LLMConfig) {
-    this.config = config;
-  }
-
-  abstract complete(
-    messages: LLMMessage[],
-    options?: LLMCompletionOptions
-  ): Promise<LLMCompletionResult>;
-  abstract stream(messages: LLMMessage[], options?: LLMCompletionOptions): AsyncIterable<string>;
-  abstract isAvailable(): boolean | Promise<boolean>;
-}
+export { AnthropicProvider } from './providers/anthropic.js';
 
 export function createProvider(config: LLMConfig): LLMProvider {
   switch (config.provider) {
     case 'claude':
       return new ClaudeProvider(config);
     case 'ollama':
-      import('./providers/ollama.js').then(({ OllamaProvider }) => new OllamaProvider(config));
+      // return new OllamaProvider(config); // Need import
+      throw new Error('Ollama provider dynamic import not yet refactored for ESM. Please use Claude.');
+    case 'openai':
+      // return new OpenAIProvider(config); // Need import
+      throw new Error('OpenAI provider dynamic import not yet refactored for ESM. Please use Claude.');
     default:
       throw new Error(`Unsupported LLM provider: ${config.provider}`);
   }

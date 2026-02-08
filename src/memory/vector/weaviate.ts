@@ -1,4 +1,4 @@
-import { WeaviateClient, weaviateConfig, ApiKey } from 'weaviate-ts-client';
+import weaviate, { WeaviateClient, ApiKey } from 'weaviate-ts-client';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface WeaviateConfig {
@@ -12,14 +12,14 @@ export interface WeaviateDocument {
   id?: string;
   content: string;
   embedding?: number[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WeaviateSearchResult {
   id: string;
   score: number;
   content: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WeaviateStore {
@@ -29,16 +29,16 @@ export interface WeaviateStore {
   query(
     vector?: number[],
     nearText?: { concepts: string[] },
-    where?: Record<string, any>,
+    where?: Record<string, unknown>,
     limit?: number
   ): Promise<WeaviateSearchResult[]>;
-  getClassSchema(): Promise<any>;
+  getClassSchema(): Promise<unknown>;
 }
 
 export interface SearchOptions {
   limit?: number;
   offset?: number;
-  where?: Record<string, any>;
+  where?: Record<string, unknown>;
   sort?: string[];
   includeVector?: boolean;
 }
@@ -48,17 +48,12 @@ export class WeaviateVectorStore implements WeaviateStore {
   private className: string;
 
   constructor(config: WeaviateConfig) {
-    const weaviateConfigObj = weaviateConfig({
-      host: config.host,
+    this.client = weaviate.client({
       scheme: config.scheme || 'http',
+      host: config.host,
+      apiKey: config.apiKey ? new ApiKey(config.apiKey) : undefined,
     });
-
-    if (config.apiKey) {
-      (weaviateConfigObj as any).apiKey = new ApiKey(config.apiKey);
-    }
-
-    this.client = (WeaviateClient as any)(weaviateConfigObj);
-    this.className = config.className || 'SentinelDocument';
+    this.className = config.className || 'AlpiciaDocument';
   }
 
   async initialize(): Promise<void> {
@@ -108,7 +103,7 @@ export class WeaviateVectorStore implements WeaviateStore {
     const limit = options?.limit || 10;
 
     try {
-      let searchBuilder: any;
+      let searchBuilder: unknown;
 
       if (typeof query === 'string') {
         searchBuilder = this.client.graphql
@@ -124,28 +119,43 @@ export class WeaviateVectorStore implements WeaviateStore {
       }
 
       if (options?.where) {
-        searchBuilder = searchBuilder.withWhere(options.where);
+        searchBuilder = (
+          searchBuilder as { withWhere: (where: Record<string, unknown>) => unknown }
+        ).withWhere(options.where);
       }
 
       if (options?.offset) {
-        searchBuilder = searchBuilder.withOffset(options.offset);
+        searchBuilder = (searchBuilder as { withOffset: (offset: number) => unknown }).withOffset(
+          options.offset
+        );
       }
 
-      searchBuilder = searchBuilder.withLimit(limit);
+      searchBuilder = (searchBuilder as { withLimit: (limit: number) => unknown }).withLimit(limit);
 
       if (options?.includeVector !== false) {
-        searchBuilder = searchBuilder.withAdd('vector');
+        searchBuilder = (searchBuilder as { withFields: (fields: string) => unknown }).withFields(
+          '_additional { id certainty distance vector } content metadata'
+        );
+      } else {
+        searchBuilder = (searchBuilder as { withFields: (fields: string) => unknown }).withFields(
+          '_additional { id certainty distance } content metadata'
+        );
       }
 
-      const result = await searchBuilder.do();
-      const data = result.data?.Get?.[this.className] || [];
+      const result = await (searchBuilder as { do: () => Promise<unknown> }).do();
+      const resultData = (result as { data?: { Get?: { [key: string]: unknown[] } } })?.data;
+      const data = resultData?.Get?.[this.className] || [];
 
-      return data.map((item: any) => ({
-        id: item._additional?.id || '',
-        score: item._additional?.score || 0,
-        content: item.content || '',
-        metadata: item.metadata ? JSON.parse(item.metadata) : {},
-      }));
+      return (data as unknown[]).map((item: unknown) => {
+        const typedItem = item as Record<string, unknown>;
+        const additional = typedItem._additional as Record<string, unknown>;
+        return {
+          id: (additional?.id as string) || '',
+          score: (additional?.certainty as number) || (additional?.distance as number) || 0,
+          content: (typedItem.content as string) || '',
+          metadata: typedItem.metadata ? JSON.parse(typedItem.metadata as string) : {},
+        };
+      });
     } catch (error) {
       console.error('Weaviate search error:', error);
       throw error;
@@ -155,10 +165,11 @@ export class WeaviateVectorStore implements WeaviateStore {
   async query(
     vector?: number[],
     nearText?: { concepts: string[] },
-    where?: Record<string, any>,
+    where?: Record<string, unknown>,
     limit?: number
   ): Promise<WeaviateSearchResult[]> {
-    return this.search(vector || nearText!.concepts.join(' '), {
+    const queryText = vector ? undefined : nearText?.concepts.join(' ');
+    return this.search(queryText || (vector as unknown as string), {
       limit,
       where,
     });
@@ -175,10 +186,10 @@ export class WeaviateVectorStore implements WeaviateStore {
     }
   }
 
-  async getClassSchema(): Promise<any> {
+  async getClassSchema(): Promise<unknown> {
     try {
       const schema = await this.client.schema.getter().do();
-      const classObj = schema.classes?.find((c: any) => c.class === this.className);
+      const classObj = schema.classes?.find((c) => c.class === this.className);
       return classObj || null;
     } catch (error) {
       console.error('Weaviate get schema error:', error);
@@ -189,7 +200,7 @@ export class WeaviateVectorStore implements WeaviateStore {
   private async createClass(): Promise<void> {
     const classObj = {
       class: this.className,
-      description: 'Document embeddings for Sentinel AI',
+      description: 'Document embeddings for Alpicia AI',
       vectorizer: 'text2vec-transformers',
       moduleConfig: {
         'text2vec-transformers': {
@@ -220,20 +231,28 @@ export class WeaviateVectorStore implements WeaviateStore {
   }
 
   async batchAdd(documents: WeaviateDocument[]): Promise<string[]> {
-    const batch = documents.map((doc) => ({
-      class: this.className,
-      id: doc.id || uuidv4(),
-      properties: {
-        content: doc.content,
-        metadata: doc.metadata ? JSON.stringify(doc.metadata) : {},
-      },
-      ...(doc.embedding && { vector: doc.embedding }),
-    }));
+    const ids: string[] = [];
 
     try {
-      await this.client.batch.objectsBatcher().withObjects(batch).do();
+      let batcher = this.client.batch.objectsBatcher();
 
-      return batch.map((b) => b.id);
+      for (const doc of documents) {
+        const id = doc.id || uuidv4();
+        ids.push(id);
+
+        batcher = batcher.withObject({
+          class: this.className,
+          id,
+          properties: {
+            content: doc.content,
+            metadata: doc.metadata ? JSON.stringify(doc.metadata) : {},
+          },
+          vector: doc.embedding,
+        });
+      }
+
+      await batcher.do();
+      return ids;
     } catch (error) {
       console.error('Weaviate batch add error:', error);
       throw error;
@@ -242,16 +261,26 @@ export class WeaviateVectorStore implements WeaviateStore {
 
   async fetchById(id: string): Promise<WeaviateSearchResult | null> {
     try {
-      const result = await this.client.data.getter().withClassName(this.className).withId(id).do();
-      const item = result.objects?.[0];
+      const result = await this.client.graphql
+        .get()
+        .withClassName(this.className)
+        .withWhere({
+          path: ['id'],
+          operator: 'Equal',
+          valueString: id,
+        })
+        .withFields('_additional { id } content metadata')
+        .do();
 
-      if (!item) return null;
+      const items = result.data?.Get?.[this.className];
+      if (!items || items.length === 0) return null;
 
+      const item = items[0];
       return {
         id: item._additional?.id || '',
         score: 1,
-        content: item.properties?.content || '',
-        metadata: item.properties?.metadata ? JSON.parse(item.properties.metadata) : {},
+        content: item.content || '',
+        metadata: item.metadata ? JSON.parse(item.metadata) : {},
       };
     } catch (error) {
       console.error('Weaviate fetch by ID error:', error);
@@ -259,7 +288,7 @@ export class WeaviateVectorStore implements WeaviateStore {
     }
   }
 
-  async update(id: string, content: string, metadata?: Record<string, any>): Promise<void> {
+  async update(id: string, content: string, metadata?: Record<string, unknown>): Promise<void> {
     try {
       await this.client.data
         .updater()
@@ -281,7 +310,7 @@ export class WeaviateVectorStore implements WeaviateStore {
       const result = await this.client.graphql
         .aggregate()
         .withClassName(this.className)
-        .withGroupBy('content')
+        .withFields('meta { count }')
         .do();
       return {
         totalCount: result.data?.Aggregate?.[this.className]?.[0]?.meta?.count || 0,
@@ -294,15 +323,15 @@ export class WeaviateVectorStore implements WeaviateStore {
 
   async createBackup(backupId: string): Promise<void> {
     try {
-      await this.client.backups.create(backupId, [this.className], {
-        backend: 'filesystem',
-        includeClassNames: [this.className],
-      });
+      await this.client.backup
+        .creator()
+        .withBackend('filesystem')
+        .withBackupId(backupId)
+        .withIncludeClassNames(this.className)
+        .do();
     } catch (error) {
       console.error('Weaviate backup error:', error);
       throw error;
     }
   }
 }
-
-export { WeaviateVectorStore };

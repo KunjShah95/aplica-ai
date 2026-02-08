@@ -100,7 +100,7 @@ export class GoogleCalendarService {
     return (response.data.items || []).map((cal) => ({
       id: cal.id || '',
       summary: cal.summary || '',
-      description: cal.description,
+      description: cal.description || undefined,
       primary: cal.primary || false,
       accessRole: cal.accessRole || 'freeBusyReader',
     }));
@@ -115,7 +115,7 @@ export class GoogleCalendarService {
     return {
       id: cal.id || '',
       summary: cal.summary || '',
-      description: cal.description,
+      description: cal.description || undefined,
       accessRole: 'owner',
     };
   }
@@ -164,23 +164,23 @@ export class GoogleCalendarService {
     });
 
     return (response.data.items || []).map((event) => ({
-      id: event.id,
+      id: event.id || undefined,
       summary: event.summary || '',
-      description: event.description,
-      location: event.location,
+      description: event.description || undefined,
+      location: event.location || undefined,
       start: {
         dateTime: event.start?.dateTime || event.start?.date || '',
-        timeZone: event.start?.timeZone,
+        timeZone: event.start?.timeZone || undefined,
       },
       end: {
         dateTime: event.end?.dateTime || event.end?.date || '',
-        timeZone: event.end?.timeZone,
+        timeZone: event.end?.timeZone || undefined,
       },
       attendees: event.attendees?.map((a) => ({
         email: a.email || '',
-        displayName: a.displayName,
+        displayName: a.displayName || undefined,
       })),
-      recurrence: event.recurrence,
+      recurrence: event.recurrence || undefined,
       reminders: event.reminders as any,
     }));
   }
@@ -196,23 +196,23 @@ export class GoogleCalendarService {
       const event = response.data;
 
       return {
-        id: event.id,
+        id: event.id || undefined,
         summary: event.summary || '',
-        description: event.description,
-        location: event.location,
+        description: event.description || undefined,
+        location: event.location || undefined,
         start: {
           dateTime: event.start?.dateTime || event.start?.date || '',
-          timeZone: event.start?.timeZone,
+          timeZone: event.start?.timeZone || undefined,
         },
         end: {
           dateTime: event.end?.dateTime || event.end?.date || '',
-          timeZone: event.end?.timeZone,
+          timeZone: event.end?.timeZone || undefined,
         },
         attendees: event.attendees?.map((a) => ({
           email: a.email || '',
-          displayName: a.displayName,
+          displayName: a.displayName || undefined,
         })),
-        recurrence: event.recurrence,
+        recurrence: event.recurrence || undefined,
         reminders: event.reminders as any,
       };
     } catch {

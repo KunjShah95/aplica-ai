@@ -58,14 +58,18 @@ export class AuthService {
   }
 
   generateTokens(payload: TokenPayload): AuthResult {
-    const accessToken = sign(payload, this.config.jwtSecret as Secret, {
-      expiresIn: this.config.jwtExpiresIn,
-    });
+    const accessToken = sign(
+      payload,
+      this.config.jwtSecret as string,
+      {
+        expiresIn: this.config.jwtExpiresIn,
+      } as any
+    );
 
     const refreshToken = sign(
       { userId: payload.userId, type: 'refresh' },
-      this.config.refreshSecret as Secret,
-      { expiresIn: this.config.refreshExpiresIn }
+      this.config.refreshSecret as string,
+      { expiresIn: this.config.refreshExpiresIn } as any
     );
 
     return {
@@ -124,9 +128,13 @@ export class AuthService {
     }
 
     const payload: TokenPayload = { userId };
-    const accessToken = sign(payload, this.config.jwtSecret as Secret, {
-      expiresIn: this.config.jwtExpiresIn,
-    });
+    const accessToken = sign(
+      payload,
+      this.config.jwtSecret as string,
+      {
+        expiresIn: this.config.jwtExpiresIn,
+      } as any
+    );
 
     return {
       accessToken,

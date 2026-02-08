@@ -146,7 +146,7 @@ export class SlackService {
   }
 
   async listUsers(): Promise<SlackUser[]> {
-    const response = await this.client.users.list();
+    const response = await this.client.users.list({} as any);
 
     return (response.members || []).map((m: any) => ({
       id: m.id || '',

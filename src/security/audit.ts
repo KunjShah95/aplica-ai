@@ -69,7 +69,19 @@ export class AuditLogger {
     this.retentionDays = options.retentionDays || 90;
     this.enableEncryption = options.enableEncryption || false;
     this.sensitiveFields = new Set(
-      options.sensitiveFields || ['password', 'token', 'api_key', 'secret', 'credential']
+      options.sensitiveFields || [
+        'password',
+        'token',
+        'api_key',
+        'secret',
+        'credential',
+        'email',
+        'phone',
+        'address',
+        'credit_card',
+        'card_number',
+        'ssn',
+      ]
     );
 
     this.initialize();

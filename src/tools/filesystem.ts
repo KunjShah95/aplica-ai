@@ -242,16 +242,17 @@ export class FilesystemTool {
       return entries.map((entry) => {
         const fullPath = path.join(resolvedPath, entry.name);
         const stats = entry.isSymbolicLink() ? fs.statSync(fullPath) : entry;
+        const fsStats = stats as fs.Stats;
 
         return {
           path: fullPath,
           name: entry.name,
           extension: path.extname(entry.name),
-          size: stats.size,
+          size: fsStats.size,
           isDirectory: entry.isDirectory(),
-          createdAt: stats.birthtime,
-          modifiedAt: stats.mtime,
-          permissions: this.getPermissionsString(stats.mode),
+          createdAt: fsStats.birthtime,
+          modifiedAt: fsStats.mtime,
+          permissions: this.getPermissionsString(fsStats.mode),
         };
       });
     } catch {
@@ -547,5 +548,3 @@ export class FilesystemTool {
     return permissions[(bits >> 6) & 7] + permissions[(bits >> 3) & 7] + permissions[bits & 7];
   }
 }
-
-export { FilesystemTool };

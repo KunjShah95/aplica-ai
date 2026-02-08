@@ -7,7 +7,19 @@ export interface Message {
 }
 
 export interface MessageMetadata {
-  source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'assistant' | 'system';
+  source:
+  | 'telegram'
+  | 'discord'
+  | 'websocket'
+  | 'cli'
+  | 'signal'
+  | 'googlechat'
+  | 'msteams'
+  | 'matrix'
+  | 'webchat'
+  | 'assistant'
+  | 'system'
+  | 'slack';
   userId: string;
   conversationId: string;
   platformMessageId?: string;
@@ -24,7 +36,17 @@ export interface Conversation {
 }
 
 export interface ConversationMetadata {
-  platform: 'telegram' | 'discord' | 'websocket' | 'cli';
+  platform:
+  | 'telegram'
+  | 'discord'
+  | 'websocket'
+  | 'cli'
+  | 'signal'
+  | 'googlechat'
+  | 'msteams'
+  | 'matrix'
+  | 'webchat'
+  | 'slack';
   title?: string;
   tags: string[];
 }

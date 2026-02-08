@@ -148,7 +148,10 @@ export class SkillLoader {
   private async loadCustomSkill(skillDir: string): Promise<Skill | null> {
     const skillPath = path.join(this.skillsPath, skillDir);
     const manifestPath = path.join(skillPath, 'SKILL.md');
-    const indexPath = path.join(skillPath, 'index.js');
+    let indexPath = path.join(skillPath, 'index.js');
+    if (!fs.existsSync(indexPath)) {
+      indexPath = path.join(skillPath, 'index.ts');
+    }
 
     if (!fs.existsSync(manifestPath)) {
       console.warn(`Skill ${skillDir} missing SKILL.md`);
@@ -156,7 +159,7 @@ export class SkillLoader {
     }
 
     if (!fs.existsSync(indexPath)) {
-      console.warn(`Skill ${skillDir} missing index.js`);
+      console.warn(`Skill ${skillDir} missing index.js or index.ts`);
       return null;
     }
 

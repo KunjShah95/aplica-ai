@@ -183,7 +183,7 @@ export class EmailService {
       if (options.to) search.to = options.to;
       if (options.seen !== undefined) search.seen = options.seen;
 
-      const messages = await this.imapClient.search(search, { limit: options.limit || 50 });
+      const messages = (await this.imapClient.search(search, { uid: true } as any)) as number[];
 
       const results: EmailInfo[] = [];
 
@@ -194,13 +194,16 @@ export class EmailService {
           bodyStructure: true,
         });
 
+        if (!msg || msg === (false as any)) continue;
+
+        const msgData = msg as any;
         results.push({
           uid: uid as number,
-          subject: msg.envelope?.subject || '',
-          from: msg.envelope?.from?.[0]?.address || '',
-          to: msg.envelope?.to?.map((t) => t.address || '') || [],
-          date: msg.envelope?.date || new Date(),
-          seen: msg.flags?.includes('\\Seen') || false,
+          subject: msgData.envelope?.subject || '',
+          from: msgData.envelope?.from?.[0]?.address || '',
+          to: msgData.envelope?.to?.map((t: any) => t.address || '') || [],
+          date: msgData.envelope?.date || new Date(),
+          seen: Array.from(msgData.flags || []).includes('\\Seen') || false,
           attachments: [],
         });
       }
@@ -218,12 +221,12 @@ export class EmailService {
     const lock = await this.imapClient.getMailboxLock(folder);
 
     try {
-      const msg = await this.imapClient.fetchOne(uid, {
+      const msg = (await this.imapClient.fetchOne(uid, {
         envelope: true,
         flags: true,
         bodyStructure: true,
         source: true,
-      });
+      })) as any;
 
       if (!msg) return null;
 
@@ -239,9 +242,9 @@ export class EmailService {
         uid: uid as number,
         subject: msg.envelope?.subject || '',
         from: msg.envelope?.from?.[0]?.address || '',
-        to: msg.envelope?.to?.map((t) => t.address || '') || [],
+        to: msg.envelope?.to?.map((t: any) => t.address || '') || [],
         date: msg.envelope?.date || new Date(),
-        seen: msg.flags?.includes('\\Seen') || false,
+        seen: Array.from(msg.flags || []).includes('\\Seen') || false,
         text: textParts.join('\n'),
         html: htmlParts.join('\n'),
         attachments,
@@ -284,14 +287,14 @@ export class EmailService {
     await this.initImap();
     if (!this.imapClient) throw new Error('IMAP not configured');
 
-    await this.imapClient.messageAddFlags(folder, uid, ['\\Seen']);
+    await (this.imapClient as any).messageAddFlags(folder, uid, ['\\Seen']);
   }
 
   async deleteEmail(uid: number, folder: string = 'INBOX'): Promise<void> {
     await this.initImap();
     if (!this.imapClient) throw new Error('IMAP not configured');
 
-    await this.imapClient.messageDelete(folder, uid);
+    await (this.imapClient as any).messageDelete(folder, uid);
   }
 
   async createFolder(name: string, parent?: string): Promise<void> {
@@ -299,7 +302,7 @@ export class EmailService {
     if (!this.imapClient) throw new Error('IMAP not configured');
 
     const fullName = parent ? `${parent}/${name}` : name;
-    await this.imapClient.folderCreate(fullName);
+    await (this.imapClient as any).folderCreate(fullName);
   }
 
   async listFolders(): Promise<string[]> {

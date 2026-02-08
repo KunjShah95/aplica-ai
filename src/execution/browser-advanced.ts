@@ -850,9 +850,13 @@ export class EnhancedBrowserAutomation {
     if (!page) return { success: false, error: 'Session not found' };
 
     try {
-      const result = await page.evaluateAsync(script, {
-        timeout: timeout || this.defaultConfig.timeout,
-      });
+      const timeoutMs = timeout || this.defaultConfig.timeout || 30000;
+      const result = await Promise.race([
+        page.evaluate(script),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Evaluation timeout')), timeoutMs)
+        )
+      ]);
       this.updateSessionActivity(sessionId);
       return { success: true, result };
     } catch (error: any) {
@@ -899,8 +903,9 @@ export class EnhancedBrowserAutomation {
     const context = this.browsers.get(sessionId)?.context;
     if (context) {
       if (cookies) {
+        // Use clearCookies with name filter for each cookie
         for (const cookie of cookies) {
-          await context.deleteCookies({ name: cookie.name, url: cookie.url });
+          await context.clearCookies({ name: cookie.name });
         }
       } else {
         await context.clearCookies();
@@ -1051,10 +1056,10 @@ export class EnhancedBrowserAutomation {
           data.tables[tableConfig.selector] =
             tableConfig.outputFormat === 'json'
               ? tableData.map((rows) =>
-                  rows.map((cells) =>
-                    Object.fromEntries(cells.map((c: string, i: number) => [`col${i}`, c]))
-                  )
+                rows.map((cells: string[]) =>
+                  Object.fromEntries(cells.map((c: string, i: number) => [`col${i}`, c]))
                 )
+              )
               : tableData;
         }
       }
@@ -1146,18 +1151,30 @@ export class EnhancedBrowserAutomation {
     const page = await this.getPage(sessionId);
     if (!page) return null;
 
+    // Use DOM-based accessibility extraction since page.accessibility is deprecated
     return await page.evaluate(() => {
-      function buildAccessibilityTree(node: any): any {
-        if (!node) return null;
+      function buildAccessibilityTree(element: Element): any {
+        const role = element.getAttribute('role') || element.tagName.toLowerCase();
+        const name = element.getAttribute('aria-label') ||
+          element.getAttribute('aria-labelledby') ||
+          (element as HTMLElement).innerText?.substring(0, 100) || '';
+
+        const children: any[] = [];
+        for (const child of Array.from(element.children)) {
+          const childTree = buildAccessibilityTree(child);
+          if (childTree) {
+            children.push(childTree);
+          }
+        }
 
         return {
-          role: node.role,
-          name: node.name,
-          children: (node.children || []).map(buildAccessibilityTree).filter(Boolean),
+          role,
+          name: name.trim(),
+          children: children.length > 0 ? children : undefined,
         };
       }
 
-      return buildAccessibilityTree(page.mainFrame().accessibilityTree);
+      return buildAccessibilityTree(document.body);
     });
   }
 

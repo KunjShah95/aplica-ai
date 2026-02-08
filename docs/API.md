@@ -1,4 +1,4 @@
-# SentinelBot REST API Documentation
+# Alpicia REST API Documentation
 
 ## Base URL
 ```

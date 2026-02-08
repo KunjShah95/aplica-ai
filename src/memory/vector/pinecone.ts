@@ -52,7 +52,6 @@ export class PineconeVectorStore implements VectorStore {
   constructor(config: PineconeConfig) {
     this.client = new Pinecone({
       apiKey: config.apiKey,
-      environment: config.environment,
     });
     this.indexName = config.indexName;
   }
@@ -164,8 +163,7 @@ export class PineconeVectorStore implements VectorStore {
         },
       });
 
-      console.log(`Creating Pinecone index '${name}'...`);
-      await this.client.waitUntilIndexIsReady(name);
+      console.log(`Pinecone index '${name}' created successfully`);
     } catch (error) {
       console.error('Pinecone create index error:', error);
       throw error;
@@ -245,5 +243,3 @@ export class PineconeVectorStore implements VectorStore {
     }
   }
 }
-
-export { PineconeVectorStore };

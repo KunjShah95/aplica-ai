@@ -42,6 +42,9 @@ export class FileSystemExecutor {
   ) {
     if (options.allowedPaths) {
       options.allowedPaths.forEach((p) => this.allowedPaths.add(path.resolve(p)));
+    } else {
+      // Default to current working directory for security
+      this.allowedPaths.add(path.resolve(process.cwd()));
     }
     if (options.maxFileSize) {
       this.maxFileSize = options.maxFileSize;

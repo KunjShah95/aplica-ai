@@ -73,20 +73,20 @@ export class NotionTool {
   async search(
     query: string,
     options?: {
-      filter?: { property: string; value: string };
+      filter?: { property: 'object'; value: 'page' | 'data_source' };
       sort?: { direction: 'ascending' | 'descending'; timestamp: 'last_edited_time' };
       pageSize?: number;
       startCursor?: string;
     }
   ): Promise<SearchResult> {
     try {
-      const response = await this.client.search({
+      const response = (await this.client.search({
         query,
         filter: options?.filter,
         sort: options?.sort,
         page_size: options?.pageSize || 100,
         start_cursor: options?.startCursor,
-      });
+      })) as any;
 
       return {
         object: 'list',
@@ -102,23 +102,23 @@ export class NotionTool {
 
   async getPage(pageId: string): Promise<Page | null> {
     try {
-      const page = await this.client.pages.retrieve({ page_id: pageId });
+      const page = (await this.client.pages.retrieve({ page_id: pageId })) as any;
 
       return {
         id: page.id,
         url: `https://notion.so/${pageId.replace(/-/g, '')}`,
         title: this.extractTitle(page),
-        icon: (page as any).icon?.emoji || (page as any).external?.url || (page as any).file?.url,
-        cover: (page as any).cover?.external?.url || (page as any).cover?.file?.url,
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
-        createdBy: (page.created_by as any)?.id || '',
-        lastEditedBy: (page.last_edited_by as any)?.id || '',
+        icon: page.icon?.emoji || page.external?.url || page.file?.url,
+        cover: page.cover?.external?.url || page.cover?.file?.url,
+        createdTime: page.created_time || '',
+        lastEditedTime: page.last_edited_time || '',
+        createdBy: page.created_by?.id || '',
+        lastEditedBy: page.last_edited_by?.id || '',
         parent: {
-          type: (page.parent as any)?.type || 'unknown',
-          id: (page.parent as any)?.id || '',
+          type: page.parent?.type || 'unknown',
+          id: page.parent?.id || '',
         },
-        archived: page.archived,
+        archived: page.archived || false,
       };
     } catch (error) {
       console.error('Failed to get page:', error);
@@ -147,16 +147,17 @@ export class NotionTool {
         children: options.children,
       } as any);
 
+      const createdPage = page as any;
       return {
-        id: page.id,
-        url: `https://notion.so/${page.id.replace(/-/g, '')}`,
-        title: this.extractTitle(page),
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
+        id: createdPage.id,
+        url: `https://notion.so/${createdPage.id.replace(/-/g, '')}`,
+        title: this.extractTitle(createdPage),
+        createdTime: createdPage.created_time || '',
+        lastEditedTime: createdPage.last_edited_time || '',
         createdBy: '',
         lastEditedBy: '',
-        parent: { type: 'page', id: page.id },
-        archived: page.archived,
+        parent: { type: 'page', id: createdPage.id },
+        archived: createdPage.archived || false,
       };
     } catch (error) {
       console.error('Failed to create page:', error);
@@ -183,21 +184,21 @@ export class NotionTool {
         updates.properties = this.buildProperties(options.title, options.properties);
       }
 
-      const page = await this.client.pages.update({
+      const page = (await this.client.pages.update({
         page_id: pageId,
         ...updates,
-      });
+      })) as any;
 
       return {
         id: page.id,
         url: `https://notion.so/${page.id.replace(/-/g, '')}`,
         title: this.extractTitle(page),
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
+        createdTime: page.created_time || '',
+        lastEditedTime: page.last_edited_time || '',
         createdBy: '',
         lastEditedBy: '',
         parent: { type: 'page', id: page.id },
-        archived: page.archived,
+        archived: page.archived || false,
       };
     } catch (error) {
       console.error('Failed to update page:', error);
@@ -328,7 +329,7 @@ export class NotionTool {
     }
   ): Promise<{ results: Page[]; hasMore: boolean; nextCursor?: string }> {
     try {
-      const response = await this.client.databases.query({
+      const response = await (this.client as any).databases.query({
         database_id: databaseId,
         filter: options?.filter,
         sorts: options?.sorts,
@@ -340,12 +341,12 @@ export class NotionTool {
         id: page.id,
         url: `https://notion.so/${page.id.replace(/-/g, '')}`,
         title: this.extractTitle(page),
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
+        createdTime: page.created_time || '',
+        lastEditedTime: page.last_edited_time || '',
         createdBy: '',
         lastEditedBy: '',
         parent: { type: 'database', id: databaseId },
-        archived: page.archived,
+        archived: page.archived || false,
       }));
 
       return {
@@ -365,8 +366,8 @@ export class NotionTool {
     properties: Record<string, { type: string; options?: any[] }>;
   }): Promise<Database | null> {
     try {
-      const database = (await this.client.databases.create({
-        parent: { page_id: options.parentPageId },
+      const database = (await (this.client as any).databases.create({
+        parent: { type: 'page_id', page_id: options.parentPageId },
         title: [{ text: { content: options.title } }],
         properties: options.properties,
       })) as any;
@@ -376,8 +377,8 @@ export class NotionTool {
         url: `https://notion.so/${database.id.replace(/-/g, '')}`,
         title: options.title,
         properties: {},
-        createdTime: database.created_time,
-        lastEditedTime: database.last_edited_time,
+        createdTime: database.created_time || '',
+        lastEditedTime: database.last_edited_time || '',
       };
     } catch (error) {
       console.error('Failed to create database:', error);
@@ -534,5 +535,3 @@ export class NotionTool {
     return result;
   }
 }
-
-export { NotionTool };

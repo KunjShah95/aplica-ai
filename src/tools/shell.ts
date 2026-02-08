@@ -301,7 +301,7 @@ export class ShellTool {
       cwd: options?.cwd,
       env: { ...process.env, ...options?.env },
       detached: true,
-      stdio: 'ignore',
+      stdio: 'ignore' as 'pipe',
     };
 
     const child = spawn(executable, args, spawnOptions);
@@ -501,5 +501,3 @@ export class ShellTool {
     }
   }
 }
-
-export { ShellTool };

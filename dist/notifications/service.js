@@ -1,0 +1,116 @@
+import { db } from '../db/index.js';
+import { NotificationType } from '../types/prisma-types.js';
+export class NotificationService {
+    async create(input) {
+        return db.notification.create({
+            data: {
+                userId: input.userId,
+                type: input.type,
+                title: input.title,
+                content: input.content,
+                metadata: input.metadata || {},
+            },
+        });
+    }
+    async createBatch(notifications) {
+        return db.notification.createMany({
+            data: notifications.map((n) => ({
+                userId: n.userId,
+                type: n.type,
+                title: n.title,
+                content: n.content,
+                metadata: n.metadata || {},
+            })),
+        });
+    }
+    async list(filters) {
+        const { userId, type, isRead, limit = 20, offset = 0 } = filters;
+        return db.notification.findMany({
+            where: {
+                userId,
+                type,
+                isRead,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+        });
+    }
+    async getUnreadCount(userId) {
+        return db.notification.count({
+            where: { userId, isRead: false },
+        });
+    }
+    async markAsRead(id) {
+        await db.notification.update({
+            where: { id },
+            data: { isRead: true, readAt: new Date() },
+        });
+    }
+    async markAllAsRead(userId) {
+        await db.notification.updateMany({
+            where: { userId, isRead: false },
+            data: { isRead: true, readAt: new Date() },
+        });
+    }
+    async delete(id) {
+        await db.notification.delete({ where: { id } });
+    }
+    async deleteOld(userId, olderThanDays = 30) {
+        const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+        const result = await db.notification.deleteMany({
+            where: {
+                userId,
+                isRead: true,
+                createdAt: { lt: cutoff },
+            },
+        });
+        return result.count;
+    }
+    async notifyTaskCompleted(userId, taskName, taskId) {
+        await this.create({
+            userId,
+            type: NotificationType.TASK_COMPLETED,
+            title: 'Task Completed',
+            content: `Your task "${taskName}" has been completed successfully.`,
+            metadata: { taskId },
+        });
+    }
+    async notifyWorkflowTriggered(userId, workflowName, workflowId) {
+        await this.create({
+            userId,
+            type: NotificationType.WORKFLOW_TRIGGERED,
+            title: 'Workflow Triggered',
+            content: `Workflow "${workflowName}" has been triggered.`,
+            metadata: { workflowId },
+        });
+    }
+    async notifyMention(userId, mentionedBy, context) {
+        await this.create({
+            userId,
+            type: NotificationType.MENTION,
+            title: 'You were mentioned',
+            content: `${mentionedBy} mentioned you: "${context}"`,
+            metadata: { mentionedBy },
+        });
+    }
+    async notifyShare(userId, sharedBy, resourceType, resourceId) {
+        await this.create({
+            userId,
+            type: NotificationType.SHARE,
+            title: 'Resource Shared',
+            content: `${sharedBy} shared a ${resourceType} with you.`,
+            metadata: { sharedBy, resourceType, resourceId },
+        });
+    }
+    async notifyError(userId, title, errorMessage) {
+        await this.create({
+            userId,
+            type: NotificationType.ERROR,
+            title,
+            content: errorMessage,
+        });
+    }
+}
+export const notificationService = new NotificationService();
+//# sourceMappingURL=service.js.map

@@ -15,11 +15,24 @@ export class TaskQueue {
   ];
 
   constructor(config?: Partial<QueueConfig>) {
+    if (process.argv.includes('dashboard')) {
+      // Mock mode for dashboard
+      this.connection = new Proxy({}, { get: () => () => { } }) as any;
+      this.config = { prefix: 'mock', defaultJobOptions: {} } as any;
+      return;
+    }
+
     this.connection = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD || undefined,
       maxRetriesPerRequest: null,
+      retryStrategy: (times) => {
+        if (process.env.NODE_ENV === 'dashboard' || process.argv.includes('dashboard')) {
+          return null; // Stop reconnecting immediately in dashboard mode
+        }
+        return Math.min(times * 50, 2000);
+      }
     });
 
     this.config = {
@@ -33,12 +46,16 @@ export class TaskQueue {
       ...config,
     };
 
-    this.initializeQueues();
+    try {
+      this.initializeQueues();
+    } catch (e) {
+      console.warn('TaskQueue initialization failed (Redis offline?):', e instanceof Error ? e.message : String(e));
+    }
   }
 
   private initializeQueues(): void {
     for (const lane of this.lanes) {
-      const queueName = `${this.config.prefix}:${lane.name}`;
+      const queueName = `${this.config.prefix}-${lane.name}`;
       const queue = new Queue(queueName, {
         connection: this.connection,
         defaultJobOptions: {
@@ -198,4 +215,17 @@ export class TaskQueue {
   }
 }
 
-export const taskQueue = new TaskQueue();
+let taskQueueInstance: TaskQueue | null = null;
+
+export const taskQueue = new Proxy({} as TaskQueue, {
+  get: (_target, prop) => {
+    if (!taskQueueInstance) {
+      taskQueueInstance = new TaskQueue();
+    }
+    const value = (taskQueueInstance as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(taskQueueInstance);
+    }
+    return value;
+  }
+});

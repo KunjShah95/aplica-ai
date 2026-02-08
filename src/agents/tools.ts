@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { shellExecutor, fileSystemExecutor, browserExecutor } from '../execution/index.js';
 
 export interface ToolDefinition {
     name: string;
@@ -22,12 +23,13 @@ export interface ToolDefinition {
 export interface ToolExecutionInput {
     toolId: string;
     input: Record<string, unknown>;
+    userId?: string; // Added for RBAC
 }
 
 export interface ToolExecutionResult {
     id: string;
     output: unknown;
-    status: 'COMPLETED' | 'FAILED';
+    status: 'COMPLETED' | 'FAILED' | 'PENDING_APPROVAL';
     duration: number;
     error?: string;
 }
@@ -37,13 +39,95 @@ type ToolHandler = (input: Record<string, unknown>) => Promise<unknown>;
 export class ToolRegistry {
     private handlers: Map<string, ToolHandler> = new Map();
 
+    constructor() {
+        this.registerBuiltinHandlers();
+    }
+
+    private registerBuiltinHandlers() {
+        this.registerHandler('builtin:read_file', async (input) => {
+            if (!input.path) throw new Error('Path is required');
+            return fileSystemExecutor.readFile(String(input.path));
+        });
+
+        this.registerHandler('builtin:write_file', async (input) => {
+            if (!input.path || input.content === undefined) throw new Error('Path and content are required');
+            return fileSystemExecutor.writeFile(String(input.path), String(input.content));
+        });
+
+        this.registerHandler('builtin:run_shell', async (input) => {
+            if (!input.command) throw new Error('Command is required');
+            // Ensure args is an array or construct one
+            const args = Array.isArray(input.args)
+                ? input.args.map(String)
+                : (input.args ? [String(input.args)] : []);
+
+            return shellExecutor.execute({
+                command: String(input.command),
+                args: args
+            });
+        });
+
+        this.registerHandler('builtin:browser_navigate', async (input) => {
+            if (!input.url) throw new Error('URL is required');
+            return browserExecutor.navigate({ url: String(input.url) });
+        });
+
+        this.registerHandler('builtin:web_search', async (input) => {
+            if (!input.query) throw new Error('Query is required');
+
+            const query = String(input.query);
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+
+            await browserExecutor.navigate({ url: searchUrl });
+
+            // Wait for results to load
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const result = await browserExecutor.evaluate(`(() => {
+                const results = [];
+                const elements = document.querySelectorAll('.result__body');
+                elements.forEach(el => {
+                    const titleEl = el.querySelector('.result__title .result__a');
+                    const snippetEl = el.querySelector('.result__snippet');
+                    if (titleEl && snippetEl) {
+                        results.push({
+                            title: titleEl.innerText,
+                            link: titleEl.href,
+                            snippet: snippetEl.innerText
+                        });
+                    }
+                });
+                return results.slice(0, 5);
+            })()`);
+
+            if (!result.success) {
+                throw new Error(`Search failed: ${result.error}`);
+            }
+
+            return {
+                query,
+                results: JSON.parse(result.data as string)
+            };
+        });
+
+        this.registerHandler('builtin:remember', async (input) => {
+            // This would typically interface with memory service
+            return { message: "Memory stored", content: input.content };
+        });
+
+        this.registerHandler('builtin:recall', async (input) => {
+            // This would typically interface with memory service
+            return { message: "Memory recall query", query: input.query };
+        });
+    }
+
     async register(tool: ToolDefinition): Promise<void> {
         await db.tool.upsert({
             where: { name: tool.name },
             create: {
                 name: tool.name,
                 description: tool.description,
-                schema: tool.schema,
+                schema: tool.schema as any,
                 handler: tool.handler,
                 category: tool.category,
                 permissions: tool.permissions || [],
@@ -52,7 +136,7 @@ export class ToolRegistry {
             },
             update: {
                 description: tool.description,
-                schema: tool.schema,
+                schema: tool.schema as any,
                 handler: tool.handler,
                 category: tool.category,
                 permissions: tool.permissions || [],
@@ -79,21 +163,47 @@ export class ToolRegistry {
             throw new Error(`Tool is disabled: ${tool.name}`);
         }
 
-        const handler = this.handlers.get(tool.name);
-        if (!handler) {
-            throw new Error(`No handler registered for tool: ${tool.name}`);
+        // --- SECURITY CHECK START ---
+        if (tool.permissions && tool.permissions.length > 0) {
+            // 1. Basic Dangerous Command Block
+            if (tool.name === 'run_shell') {
+                const cmd = input.input.command as string;
+                const dangerous = ['rm', 'mkfs', 'dd', 'chmod', 'chown', 'sudo', 'su'];
+                if (dangerous.includes(cmd)) {
+                    // In a real system, we would trigger an "Approval Request" here
+                    throw new Error(`Security Alert: Command '${cmd}' is blocked by default safety policy.`);
+                }
+            }
+
+            // 2. Future RBAC Extension Point
+            if (input.userId) {
+                // await checkUserPermissions(input.userId, tool.permissions);
+            }
         }
+        // --- SECURITY CHECK END ---
+
+        const handler = this.handlers.get(tool.handler) || this.handlers.get(tool.name);
+
+        if (!handler) {
+            // Attempt to find by name if handler string didn't match
+            const fallback = this.handlers.get(tool.name);
+            if (!fallback) {
+                throw new Error(`No handler registered for tool: ${tool.name} (handler: ${tool.handler})`);
+            }
+        }
+
+        const finalHandler = handler || this.handlers.get(tool.name)!;
 
         const execution = await db.toolExecution.create({
             data: {
                 toolId: tool.id,
-                input: input.input,
+                input: input.input as any,
                 status: 'RUNNING',
             },
         });
 
         try {
-            const output = await handler(input.input);
+            const output = await finalHandler(input.input);
             const duration = Date.now() - startTime;
 
             await db.toolExecution.update({
@@ -280,7 +390,7 @@ export class ToolRegistry {
                 create: {
                     name: tool.name,
                     description: tool.description,
-                    schema: tool.schema,
+                    schema: tool.schema as any,
                     handler: tool.handler,
                     category: tool.category,
                     permissions: tool.permissions || [],
@@ -289,7 +399,10 @@ export class ToolRegistry {
                 },
                 update: {
                     description: tool.description,
-                    schema: tool.schema,
+                    schema: tool.schema as any,
+                    handler: tool.handler,
+                    category: tool.category,
+                    permissions: tool.permissions || [],
                 },
             });
         }

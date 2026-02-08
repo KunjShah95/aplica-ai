@@ -86,7 +86,7 @@ export class WebhookService {
         const body = JSON.stringify(payload);
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'User-Agent': 'SentinelBot-Webhook/1.0',
+            'User-Agent': 'Alpicia-Webhook/1.0',
         };
 
         if (secret) {

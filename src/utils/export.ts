@@ -106,7 +106,7 @@ export class DataExporter {
     private formatAsMarkdown(data: Record<string, unknown>): ExportResult {
         const lines: string[] = [];
 
-        lines.push('# SentinelBot Data Export');
+        lines.push('# Alpicia Data Export');
         lines.push(`\nExported: ${data.exportedAt}`);
         lines.push(`User ID: ${data.userId}`);
 

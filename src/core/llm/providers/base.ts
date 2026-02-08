@@ -27,7 +27,14 @@ export interface LLMResponse {
   };
   latency: number;
   model: string;
-  finishReason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | 'function_call';
+  finishReason:
+    | 'stop'
+    | 'length'
+    | 'tool_calls'
+    | 'content_filter'
+    | 'function_call'
+    | 'tool_use'
+    | 'stop_sequence';
   functionCalls?: FunctionCall[];
 }
 
@@ -86,5 +93,3 @@ export interface LLMProvider {
 
   listModels(): Promise<string[]>;
 }
-
-export { LLMProvider };

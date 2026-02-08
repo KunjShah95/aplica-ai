@@ -8,18 +8,19 @@ export default [
         console: 'readonly',
         process: 'readonly',
         setTimeout: 'readonly',
-        setInterval: 'readonly'
-      }
+        setInterval: 'readonly',
+      },
     },
     plugins: {
-      '@typescript-eslint': {}
+      '@typescript-eslint': {
+        rules: {
+          'no-explicit-any': 'warn',
+          'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+          'consistent-type-imports': 'error',
+          'no-floating-promises': 'error',
+          'no-misused-promises': 'error',
+        },
+      },
     },
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'error',
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error'
-    }
-  }
+  },
 ];

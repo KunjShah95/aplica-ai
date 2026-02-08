@@ -3,6 +3,7 @@ import { MessageRouter } from './router.js';
 import { WebSocketGateway } from './websocket.js';
 import { TelegramAdapter } from './adapters/telegram.js';
 import { DiscordAdapter } from './adapters/discord.js';
+import { SlackAdapter } from './adapters/slack.js';
 import { createProvider } from '../core/llm/index.js';
 import { createAgent } from '../core/agent.js';
 
@@ -13,6 +14,7 @@ export class GatewayServer {
   private wsGateway: WebSocketGateway | null = null;
   private telegramAdapter: TelegramAdapter | null = null;
   private discordAdapter: DiscordAdapter | null = null;
+  private slackAdapter: SlackAdapter | null = null;
   private isRunning: boolean = false;
 
   constructor(config: AppConfig) {
@@ -33,6 +35,7 @@ export class GatewayServer {
     await this.startWebSocket();
     await this.startTelegram();
     await this.startDiscord();
+    await this.startSlack();
 
     this.isRunning = true;
     console.log('\nGateway Server is fully operational');
@@ -101,6 +104,32 @@ export class GatewayServer {
     }
   }
 
+
+  private async startSlack(): Promise<void> {
+    const slackConfig = this.config.messaging.slack;
+    if (!slackConfig?.enabled || !slackConfig.token) {
+      console.log('Slack disabled or not configured');
+      return;
+    }
+
+    this.slackAdapter = new SlackAdapter({
+      token: slackConfig.token,
+      signingSecret: slackConfig.signingSecret,
+      appToken: slackConfig.appToken,
+      router: this.router,
+    });
+
+    try {
+      await this.slackAdapter.start();
+    } catch (error) {
+      console.error(
+        'Failed to start Slack bot:',
+        error instanceof Error ? error.message : String(error)
+      );
+      this.slackAdapter = null;
+    }
+  }
+
   async stop(): Promise<void> {
     if (!this.isRunning) {
       return;
@@ -118,6 +147,11 @@ export class GatewayServer {
       this.discordAdapter = null;
     }
 
+    if (this.slackAdapter) {
+      await this.slackAdapter.stop();
+      this.slackAdapter = null;
+    }
+
     if (this.wsGateway) {
       await this.wsGateway.stop();
       this.wsGateway = null;
@@ -132,12 +166,14 @@ export class GatewayServer {
     websocket: boolean;
     telegram: boolean;
     discord: boolean;
+    slack: boolean;
   } {
     return {
       running: this.isRunning,
       websocket: this.wsGateway?.getStats ? true : false,
       telegram: this.telegramAdapter?.isActive() ?? false,
       discord: this.discordAdapter?.isActive() ?? false,
+      slack: this.slackAdapter?.isActive() ?? false,
     };
   }
 

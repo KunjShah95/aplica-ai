@@ -221,13 +221,13 @@ export class EmailService {
     }> {
         const templates: Record<string, { subject: string; html: string; text: string }> = {
             welcome: {
-                subject: 'Welcome to SentinelBot, {{name}}!',
+                subject: 'Welcome to Alpicia, {{name}}!',
                 html: `
           <h1>Welcome, {{name}}!</h1>
-          <p>Thank you for joining SentinelBot. We're excited to have you!</p>
+          <p>Thank you for joining Alpicia. We're excited to have you!</p>
           <p>Get started by exploring our features.</p>
         `,
-                text: 'Welcome, {{name}}! Thank you for joining SentinelBot.',
+                text: 'Welcome, {{name}}! Thank you for joining Alpicia.',
             },
             passwordReset: {
                 subject: 'Reset Your Password',
@@ -257,7 +257,7 @@ export function createEmailService(): EmailService | null {
     const smtpHost = process.env.SMTP_HOST;
     const resendKey = process.env.RESEND_API_KEY;
     const sendgridKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.EMAIL_FROM || 'noreply@sentinelbot.app';
+    const fromEmail = process.env.EMAIL_FROM || 'noreply@alpicia.app';
 
     if (resendKey) {
         return new EmailService(new ResendProvider(resendKey, fromEmail));

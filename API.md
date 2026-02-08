@@ -1,6 +1,6 @@
-# SentinelBot API Reference
+# Alpicia API Reference
 
-Complete API documentation for SentinelBot.
+Complete API documentation for Alpicia.
 
 ## Table of Contents
 
@@ -643,7 +643,7 @@ Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 
 {
-  "model": "sentinel-claude",
+  "model": "alpicia-claude",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "Hello!"}
@@ -661,7 +661,7 @@ Authorization: Bearer YOUR_API_KEY
   "id": "chatcmpl-...",
   "object": "chat.completion",
   "created": 1704067200,
-  "model": "sentinel-claude",
+  "model": "alpicia-claude",
   "choices": [
     {
       "index": 0,
@@ -693,9 +693,9 @@ Authorization: Bearer YOUR_API_KEY
 {
   "object": "list",
   "data": [
-    { "id": "sentinel-claude", "object": "model" },
-    { "id": "sentinel-sonnet", "object": "model" },
-    { "id": "sentinel-haiku", "object": "model" }
+    { "id": "alpicia-claude", "object": "model" },
+    { "id": "alpicia-sonnet", "object": "model" },
+    { "id": "alpicia-haiku", "object": "model" }
   ]
 }
 ```

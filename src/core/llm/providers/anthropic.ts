@@ -224,5 +224,3 @@ export class AnthropicProvider implements LLMProvider {
     return error;
   }
 }
-
-export { AnthropicProvider };

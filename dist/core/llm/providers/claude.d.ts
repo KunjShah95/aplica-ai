@@ -1,4 +1,4 @@
-import { LLMProvider, LLMMessage, LLMCompletionResult, LLMCompletionOptions } from '../index';
+import { LLMProvider, LLMMessage, LLMCompletionResult, LLMCompletionOptions } from '../base.js';
 import { LLMConfig } from '../../../config/types';
 export declare class ClaudeProvider extends LLMProvider {
     private client;

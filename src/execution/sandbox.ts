@@ -1,6 +1,7 @@
-import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
+import { Worker, isMainThread } from 'worker_threads';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { DockerSandboxExecutor } from './docker-sandbox.js';
 
 export interface SandboxOptions {
   timeout?: number;
@@ -8,6 +9,7 @@ export interface SandboxOptions {
   cpuLimit?: number;
   allowedModules?: string[];
   workingDirectory?: string;
+  useDocker?: boolean;
 }
 
 export interface SandboxExecutionResult {
@@ -18,6 +20,7 @@ export interface SandboxExecutionResult {
   executionTime: number;
   memoryUsage?: number;
   timestamp: Date;
+  secure?: boolean; // Indicates if the execution was securely sandboxed (e.g. via Docker)
 }
 
 export interface SandboxedTask {
@@ -30,20 +33,39 @@ export class SandboxExecutor {
   private defaultTimeout: number = 30000;
   private defaultMemoryLimit: number = 512 * 1024 * 1024;
   private defaultCpuLimit: number = 50;
-  private taskCounter: number = 0;
+  private useDocker: boolean = true;
+  private dockerExecutor: DockerSandboxExecutor;
 
   constructor(private options: SandboxOptions = {}) {
     this.defaultTimeout = options.timeout ?? 30000;
     this.defaultMemoryLimit = options.memoryLimit ?? 512 * 1024 * 1024;
     this.defaultCpuLimit = options.cpuLimit ?? 50;
+    this.useDocker = options.useDocker ?? true;
+    this.dockerExecutor = new DockerSandboxExecutor(options);
   }
 
   async execute(task: SandboxedTask): Promise<SandboxExecutionResult> {
     const id = randomUUID();
     const startTime = Date.now();
 
+    if (this.useDocker) {
+      try {
+        const dockerResult = await this.dockerExecutor.execute(task);
+        if (dockerResult.success || (dockerResult.error && !dockerResult.error.includes('Docker failed'))) {
+          return { ...dockerResult, secure: true };
+        }
+        // If docker failed to start (not code error), fallback or error out
+        console.warn('Docker sandbox failed to start, falling back to VM isolation (LESS SECURE). Error:', dockerResult.error);
+      } catch (e) {
+        console.warn('Docker sandbox exception, falling back to VM isolation (LESS SECURE).', e);
+      }
+    }
+
+    // Fallback to minimal VM isolation (Legacy / Dev mode)
+    // WARN: This is not secure for untrusted code
     if (isMainThread) {
-      return this.runInWorker(id, task, startTime);
+      const result = await this.runInWorker(id, task, startTime);
+      return { ...result, secure: false };
     }
 
     return this.runInCurrentThread(task, startTime);
@@ -90,6 +112,7 @@ export class SandboxExecutor {
           error: error.message || errorOutput,
           executionTime: Date.now() - startTime,
           timestamp: new Date(),
+          secure: false,
         });
       });
 
@@ -102,6 +125,7 @@ export class SandboxExecutor {
             error: `Worker exited with code ${code}`,
             executionTime: Date.now() - startTime,
             timestamp: new Date(),
+            secure: false,
           });
         }
       });
@@ -115,6 +139,7 @@ export class SandboxExecutor {
           error: `Execution timed out after ${this.defaultTimeout}ms`,
           executionTime: Date.now() - startTime,
           timestamp: new Date(),
+          secure: false,
         });
       }, this.defaultTimeout);
     });
@@ -132,6 +157,7 @@ export class SandboxExecutor {
         output: typeof result === 'string' ? result : JSON.stringify(result),
         executionTime: Date.now() - startTime,
         timestamp: new Date(),
+        secure: false,
       };
     } catch (error) {
       return {
@@ -141,6 +167,7 @@ export class SandboxExecutor {
         error: error instanceof Error ? error.message : String(error),
         executionTime: Date.now() - startTime,
         timestamp: new Date(),
+        secure: false,
       };
     }
   }
@@ -173,6 +200,7 @@ export class SandboxExecutor {
 
     const contextKeys = Object.keys(context);
     const contextValues = Object.values(context);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const contextEntries = contextKeys.map((key, index) => `${key} = args[${index}]`).join(', ');
 
     const wrappedCode = `
@@ -183,6 +211,7 @@ export class SandboxExecutor {
       })
     `;
 
+    // eslint-disable-next-line no-eval
     const fn = eval(wrappedCode);
     return fn(contextValues);
   }
@@ -209,13 +238,14 @@ export class SandboxExecutor {
     });
   }
 
-  getStatus(): { timeout: number; memoryLimit: number; cpuLimit: number } {
+  getStatus(): { timeout: number; memoryLimit: number; cpuLimit: number; secureMode: boolean } {
     return {
       timeout: this.defaultTimeout,
       memoryLimit: this.defaultMemoryLimit,
       cpuLimit: this.defaultCpuLimit,
+      secureMode: this.useDocker,
     };
   }
 }
 
-export const sandboxExecutor = new SandboxExecutor();
+export const sandboxExecutor = new SandboxExecutor({ useDocker: true });

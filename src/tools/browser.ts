@@ -340,13 +340,15 @@ export class BrowserTool {
 
     try {
       if (options.selector) {
-        await this.page.locator(options.selector).scrollIntoViewIfNeeded({
-          behavior: options.behavior,
-        });
+        await this.page.locator(options.selector).scrollIntoViewIfNeeded();
       } else {
         await this.page.evaluate(
           ({ x, y, behavior }) => {
-            window.scrollTo({ left: x || 0, top: y || 0, behavior: behavior || 'auto' });
+            (window as Window).scrollTo({
+              left: x || 0,
+              top: y || 0,
+              behavior: behavior || 'auto',
+            });
           },
           { x: options.x, y: options.y, behavior: options.behavior }
         );
@@ -411,7 +413,7 @@ export class BrowserTool {
         clip: options?.clip,
         omitBackground: options?.omitBackground,
         quality: options?.quality,
-        type: options?.type || 'png',
+        type: (options?.type || 'png') as 'png' | 'jpeg',
       });
 
       return {
@@ -627,5 +629,3 @@ export class BrowserTool {
     return this.page;
   }
 }
-
-export { BrowserTool };

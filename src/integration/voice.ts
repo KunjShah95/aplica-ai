@@ -102,7 +102,7 @@ export class VoiceService {
 
     const response = await this.openai.audio.transcriptions.create({
       model: options.model || 'whisper-1',
-      file: new File([options.audioBuffer], 'audio.mp3', { type: 'audio/mp3' }),
+      file: new File([new Blob([options.audioBuffer])], 'audio.mp3', { type: 'audio/mp3' }),
       language: options.language,
       prompt: options.prompt,
       temperature: options.temperature,
@@ -186,7 +186,7 @@ export class VoiceService {
       rate?: 'slow' | 'medium' | 'fast';
       pitch?: string;
     }
-  ): string {
+  ): Promise<string> {
     const rate = options?.rate || 'medium';
     const pitch = options?.pitch || '+0%';
 

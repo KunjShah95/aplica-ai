@@ -107,11 +107,12 @@ export class SlackTool {
         metadata: options.metadata,
       } as any);
 
+      const slackResult = result as any;
       return {
-        ts: result.ts || '',
-        channel: result.channel || '',
-        text: result.text || '',
-        threadTs: result.thread_ts,
+        ts: slackResult.ts || '',
+        channel: slackResult.channel || '',
+        text: slackResult.text || '',
+        threadTs: slackResult.thread_ts,
       };
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -152,11 +153,12 @@ export class SlackTool {
         blocks,
       } as any);
 
+      const replyResult = result as any;
       return {
-        ts: result.ts || '',
-        channel: result.channel || '',
-        text: result.text || '',
-        threadTs: result.thread_ts,
+        ts: replyResult.ts || '',
+        channel: replyResult.channel || '',
+        text: replyResult.text || '',
+        threadTs: replyResult.thread_ts,
       };
     } catch (error) {
       console.error('Failed to reply to thread:', error);
@@ -244,7 +246,12 @@ export class SlackTool {
         })),
         replyCount: message.reply_count,
         replyUsers: message.reply_users,
-        edited: message.edited,
+        edited: message.edited
+          ? {
+              ts: message.edited.ts || '',
+              user: message.edited.user || '',
+            }
+          : undefined,
         deleted: message.subtype === 'message_deleted',
       };
     } catch (error) {
@@ -383,8 +390,8 @@ export class SlackTool {
           })),
         },
         files: {
-          total: result.files?.total || 0,
-          matches: result.files?.matches || [],
+          total: (result as any).files?.total || 0,
+          matches: (result as any).files?.matches || [],
         },
       };
     } catch (error) {
@@ -405,13 +412,13 @@ export class SlackTool {
   ): Promise<boolean> {
     try {
       await this.client.files.uploadV2({
-        channels: channels.join(','),
+        channel_id: channels[0],
         file,
         filename,
         title: options?.title,
         initial_comment: options?.initialComment,
         thread_ts: options?.threadTs,
-      });
+      } as any);
       return true;
     } catch (error) {
       console.error('Failed to upload file:', error);
@@ -453,16 +460,17 @@ export class SlackTool {
 
       if (!result.channel) return null;
 
+      const channelInfo = result.channel as any;
       return {
-        id: result.channel.id || '',
-        name: result.channel.name || '',
-        isPrivate: result.channel.is_private,
-        isMember: result.channel.is_member,
-        numMembers: result.channel.num_members || 0,
-        topic: result.channel.topic?.value,
-        purpose: result.channel.purpose?.value,
-        created: result.channel.created || '',
-        updated: result.channel.updated || '',
+        id: channelInfo.id || '',
+        name: channelInfo.name || '',
+        isPrivate: channelInfo.is_private || false,
+        isMember: channelInfo.is_member || false,
+        numMembers: channelInfo.num_members || 0,
+        topic: channelInfo.topic?.value || '',
+        purpose: channelInfo.purpose?.value || '',
+        created: String(channelInfo.created || ''),
+        updated: String(channelInfo.updated || ''),
       };
     } catch (error) {
       console.error('Failed to get channel info:', error);
@@ -470,5 +478,3 @@ export class SlackTool {
     }
   }
 }
-
-export { SlackTool };

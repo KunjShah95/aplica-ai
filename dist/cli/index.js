@@ -6,7 +6,7 @@ import { handleChat, handleStatus, handleConfig, handleHelp } from './commands.j
 export async function startCLI(config) {
     const llm = createProvider(config.llm);
     if (!llm.isAvailable()) {
-        console.error('❌ LLM provider not configured. Please set LLM_API_KEY in your environment.');
+        console.error('LLM provider not configured. Please set LLM_API_KEY in your environment.');
         console.error('   Copy .env.example to .env and add your API key.\n');
         process.exit(1);
     }
@@ -16,7 +16,7 @@ export async function startCLI(config) {
         output: process.stdout,
         prompt: '> '
     });
-    console.log('✅ SentinelBot ready!');
+    console.log('Alpicia ready!');
     console.log("Type 'help' for available commands.\n");
     rl.prompt();
     rl.on('line', async (input) => {
@@ -37,7 +37,7 @@ export async function startCLI(config) {
                 break;
             case 'exit':
             case 'quit':
-                console.log('\n👋 Goodbye!\n');
+                console.log('\nGoodbye!\n');
                 rl.close();
                 process.exit(0);
             default:
@@ -48,19 +48,19 @@ export async function startCLI(config) {
         rl.prompt();
     });
     rl.on('close', () => {
-        console.log('\n👋 Goodbye!\n');
+        console.log('\nGoodbye!\n');
         process.exit(0);
     });
 }
 async function main() {
-    console.log('\n🚀 SentinelBot CLI');
+    console.log('\nAlpicia CLI');
     console.log('Loading configuration...\n');
     try {
         const config = await configLoader.load();
         await startCLI(config);
     }
     catch (error) {
-        console.error('Error starting SentinelBot:', error instanceof Error ? error.message : String(error));
+        console.error('Error starting Alpicia:', error instanceof Error ? error.message : String(error));
         process.exit(1);
     }
 }

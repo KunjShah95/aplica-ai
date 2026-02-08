@@ -5,18 +5,18 @@ export async function handleChat(context) {
         output: process.stdout
     });
     const conversation = [];
-    console.log('\n🤖 SentinelBot Chat Mode');
+    console.log('\nAlpicia Chat Mode');
     console.log('Type your messages. Press Ctrl+C or type "exit" to quit.\n');
     const askQuestion = () => {
         rl.question('You: ', async (input) => {
             if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
-                console.log('\n👋 Goodbye!');
+                console.log('\nGoodbye!');
                 rl.close();
                 return;
             }
             conversation.push({ role: 'user', content: input });
             try {
-                console.log('Sentinel: ');
+                console.log('Alpicia: ');
                 const result = await context.llm.complete(conversation);
                 console.log(result.content);
                 conversation.push({ role: 'assistant', content: result.content });
@@ -30,21 +30,21 @@ export async function handleChat(context) {
     askQuestion();
 }
 export async function handleStatus(context) {
-    console.log('\n📊 System Status');
+    console.log('\nSystem Status');
     console.log('='.repeat(40));
     console.log(`Name: ${context.config.soul.name} v${context.config.soul.version}`);
     console.log(`LLM Provider: ${context.config.llm.provider}`);
     console.log(`LLM Model: ${context.config.llm.model}`);
     console.log(`LLM Available: ${context.llm.isAvailable()}`);
-    console.log(`Telegram: ${context.config.messaging.telegram?.enabled ? '✅' : '❌'}`);
-    console.log(`Discord: ${context.config.messaging.discord?.enabled ? '✅' : '❌'}`);
-    console.log(`WebSocket: ${context.config.messaging.websocket?.enabled ? '✅' : '❌'}`);
+    console.log(`Telegram: ${context.config.messaging.telegram?.enabled ? 'enabled' : 'disabled'}`);
+    console.log(`Discord: ${context.config.messaging.discord?.enabled ? 'enabled' : 'disabled'}`);
+    console.log(`WebSocket: ${context.config.messaging.websocket?.enabled ? 'enabled' : 'disabled'}`);
     console.log(`Memory: ${context.config.memory.type}`);
-    console.log(`Sandbox: ${context.config.security.sandboxEnabled ? '✅' : '❌'}`);
+    console.log(`Sandbox: ${context.config.security.sandboxEnabled ? 'enabled' : 'disabled'}`);
     console.log('='.repeat(40) + '\n');
 }
 export async function handleConfig(context) {
-    console.log('\n⚙️ Configuration');
+    console.log('\nConfiguration');
     console.log('='.repeat(40));
     console.log(`SOUL Name: ${context.config.soul.name}`);
     console.log(`Identity: ${context.config.identity.displayName} (@${context.config.identity.username})`);
@@ -55,7 +55,7 @@ export async function handleConfig(context) {
     console.log('='.repeat(40) + '\n');
 }
 export async function handleHelp() {
-    console.log('\n📖 Available Commands');
+    console.log('\nAvailable Commands');
     console.log('='.repeat(40));
     console.log('  chat     - Start interactive chat mode');
     console.log('  status   - Show system status');

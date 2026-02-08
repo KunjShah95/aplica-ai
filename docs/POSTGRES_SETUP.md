@@ -1,6 +1,6 @@
 # PostgreSQL Setup Guide
 
-This guide walks you through setting up PostgreSQL with pgvector for SentinelBot.
+This guide walks you through setting up PostgreSQL with pgvector for Alpicia.
 
 ## Prerequisites
 
@@ -50,10 +50,10 @@ brew install pgvector
 ### Docker (Recommended for Development)
 ```bash
 docker run -d \
-  --name sentinelbot-db \
-  -e POSTGRES_USER=sentinelbot \
+  --name alpicia-db \
+  -e POSTGRES_USER=alpicia \
   -e POSTGRES_PASSWORD=your_password \
-  -e POSTGRES_DB=sentinelbot \
+  -e POSTGRES_DB=alpicia \
   -p 5432:5432 \
   pgvector/pgvector:pg16
 ```
@@ -65,17 +65,17 @@ docker run -d \
 psql -U postgres
 
 # Create database and user
-CREATE USER sentinelbot WITH PASSWORD 'your_password';
-CREATE DATABASE sentinelbot OWNER sentinelbot;
+CREATE USER alpicia WITH PASSWORD 'your_password';
+CREATE DATABASE alpicia OWNER alpicia;
 
 # Connect to the new database
-\c sentinelbot
+\c alpicia
 
 # Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
 # Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE sentinelbot TO sentinelbot;
+GRANT ALL PRIVILEGES ON DATABASE alpicia TO alpicia;
 
 # Exit
 \q
@@ -91,7 +91,7 @@ cp .env.example .env
 
 Edit `.env`:
 ```env
-DATABASE_URL="postgresql://sentinelbot:your_password@localhost:5432/sentinelbot?schema=public"
+DATABASE_URL="postgresql://alpicia:your_password@localhost:5432/alpicia?schema=public"
 ```
 
 ## 5. Run Migrations
@@ -194,8 +194,8 @@ sudo systemctl status postgresql
 ### Permission Denied
 ```sql
 -- Grant all necessary permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO sentinelbot;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO sentinelbot;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO alpicia;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO alpicia;
 ```
 
 ### pgvector Not Found
@@ -219,12 +219,12 @@ npm run db:migrate
 
 ### Backup
 ```bash
-pg_dump -U sentinelbot sentinelbot > backup.sql
+pg_dump -U alpicia alpicia > backup.sql
 ```
 
 ### Restore
 ```bash
-psql -U sentinelbot sentinelbot < backup.sql
+psql -U alpicia alpicia < backup.sql
 ```
 
 ## Production Recommendations

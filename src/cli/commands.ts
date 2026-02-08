@@ -15,7 +15,7 @@ export async function handleChat(context: CLIContext): Promise<void> {
 
   const conversation: { role: 'user' | 'assistant'; content: string }[] = [];
 
-  console.log('\nSentinelBot Chat Mode');
+  console.log('\nAlpicia Chat Mode');
   console.log('Type your messages. Press Ctrl+C or type "exit" to quit.\n');
 
   const askQuestion = (): void => {
@@ -29,7 +29,7 @@ export async function handleChat(context: CLIContext): Promise<void> {
       conversation.push({ role: 'user', content: input });
 
       try {
-        console.log('Sentinel: ');
+        console.log('Alpicia: ');
         const result = await context.llm.complete(conversation);
         console.log(result.content);
         conversation.push({ role: 'assistant', content: result.content });

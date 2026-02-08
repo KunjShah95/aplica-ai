@@ -63,11 +63,16 @@ export class OpenAIProvider implements LLMProvider {
 
       const response = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          name: m.name,
-        })),
+        messages: messages.map((m) => {
+          const msg: any = {
+            role: m.role,
+            content: m.content,
+          };
+          if (m.name) {
+            msg.name = m.name;
+          }
+          return msg;
+        }),
         temperature: effectiveTemperature,
         max_tokens: effectiveMaxTokens,
         top_p: this.config.topP,
@@ -103,11 +108,16 @@ export class OpenAIProvider implements LLMProvider {
   ): Promise<LLMResponse> {
     const stream = await this.client.chat.completions.create({
       model: this.config.model,
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-        name: m.name,
-      })),
+      messages: messages.map((m) => {
+        const msg: any = {
+          role: m.role,
+          content: m.content,
+        };
+        if (m.name) {
+          msg.name = m.name;
+        }
+        return msg;
+      }),
       temperature,
       max_tokens: maxTokens,
       top_p: this.config.topP,
@@ -221,5 +231,3 @@ export class OpenAIProvider implements LLMProvider {
     return error;
   }
 }
-
-export { OpenAIProvider };

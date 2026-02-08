@@ -28,7 +28,7 @@ export class ConfigLoader {
             llm,
             messaging,
             memory,
-            security
+            security,
         };
         return this.config;
     }
@@ -36,17 +36,22 @@ export class ConfigLoader {
         const content = fs.readFileSync(filePath, 'utf-8');
         const frontmatter = this.extractFrontmatter(content);
         return {
-            name: String(frontmatter.name || 'SentinelBot'),
+            name: String(frontmatter.name || 'Alpicia'),
             version: String(frontmatter.version || '1.0.0'),
             description: String(frontmatter.description || 'AI Personal Assistant'),
             personality: {
                 traits: Array.isArray(frontmatter.traits) ? frontmatter.traits : [],
                 values: Array.isArray(frontmatter.values) ? frontmatter.values : [],
-                boundaries: Array.isArray(frontmatter.boundaries) ? frontmatter.boundaries : [],
-                defaultTone: frontmatter.defaultTone || 'professional'
+                boundaries: Array.isArray(frontmatter.boundaries)
+                    ? frontmatter.boundaries
+                    : [],
+                defaultTone: frontmatter.defaultTone ||
+                    'professional',
             },
             goals: Array.isArray(frontmatter.goals) ? frontmatter.goals : [],
-            constraints: Array.isArray(frontmatter.constraints) ? frontmatter.constraints : []
+            constraints: Array.isArray(frontmatter.constraints)
+                ? frontmatter.constraints
+                : [],
         };
     }
     async loadIdentityConfig(filePath) {
@@ -56,8 +61,8 @@ export class ConfigLoader {
         const frontmatter = this.extractFrontmatter(content);
         const availability = frontmatter.availability;
         return {
-            displayName: String(frontmatter.displayName || 'Sentinel'),
-            username: String(frontmatter.username || 'sentinel_bot'),
+            displayName: String(frontmatter.displayName || 'Alpicia'),
+            username: String(frontmatter.username || 'alpicia_bot'),
             avatar: frontmatter.avatar,
             bio: String(frontmatter.bio || 'AI Personal Assistant'),
             tagline: String(frontmatter.tagline || 'Your trusted AI companion'),
@@ -65,8 +70,8 @@ export class ConfigLoader {
             timezone: String(frontmatter.timezone || 'UTC'),
             availability: {
                 enabled: Boolean(availability?.enabled ?? true),
-                defaultHours: String(availability?.defaultHours || '24/7')
-            }
+                defaultHours: String(availability?.defaultHours || '24/7'),
+            },
         };
     }
     async loadUserContext(filePath) {
@@ -78,8 +83,10 @@ export class ConfigLoader {
             id: String(frontmatter.id || 'default'),
             name: String(frontmatter.name || 'User'),
             preferences: frontmatter.preferences || {},
-            permissions: Array.isArray(frontmatter.permissions) ? frontmatter.permissions : ['basic'],
-            memoryEnabled: Boolean(frontmatter.memoryEnabled ?? true)
+            permissions: Array.isArray(frontmatter.permissions)
+                ? frontmatter.permissions
+                : ['basic'],
+            memoryEnabled: Boolean(frontmatter.memoryEnabled ?? true),
         };
     }
     loadLLMConfig() {
@@ -89,26 +96,30 @@ export class ConfigLoader {
             model: process.env.LLM_MODEL || 'claude-sonnet-4-20250514',
             maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '4096'),
             temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.7'),
-            systemPrompt: process.env.LLM_SYSTEM_PROMPT
+            systemPrompt: process.env.LLM_SYSTEM_PROMPT,
         };
     }
     loadMessagingConfig() {
         const telegramEnabled = process.env.TELEGRAM_ENABLED === 'true';
         const discordEnabled = process.env.DISCORD_ENABLED === 'true';
         return {
-            telegram: telegramEnabled ? {
-                enabled: true,
-                token: process.env.TELEGRAM_TOKEN || ''
-            } : undefined,
-            discord: discordEnabled ? {
-                enabled: true,
-                token: process.env.DISCORD_TOKEN || '',
-                guildId: process.env.DISCORD_GUILD_ID || ''
-            } : undefined,
+            telegram: telegramEnabled
+                ? {
+                    enabled: true,
+                    token: process.env.TELEGRAM_TOKEN || '',
+                }
+                : undefined,
+            discord: discordEnabled
+                ? {
+                    enabled: true,
+                    token: process.env.DISCORD_TOKEN || '',
+                    guildId: process.env.DISCORD_GUILD_ID || '',
+                }
+                : undefined,
             websocket: {
                 enabled: process.env.WS_ENABLED !== 'false',
-                port: parseInt(process.env.WS_PORT || '3001')
-            }
+                port: parseInt(process.env.WS_PORT || '3001'),
+            },
         };
     }
     loadMemoryConfig() {
@@ -116,7 +127,15 @@ export class ConfigLoader {
             type: process.env.MEMORY_TYPE || 'jsonl',
             path: process.env.MEMORY_PATH || './memory',
             maxEntries: parseInt(process.env.MEMORY_MAX_ENTRIES || '10000'),
-            searchEnabled: process.env.MEMORY_SEARCH !== 'false'
+            searchEnabled: process.env.MEMORY_SEARCH !== 'false',
+            postgres: {
+                host: process.env.POSTGRES_HOST,
+                port: parseInt(process.env.POSTGRES_PORT || '5432'),
+                database: process.env.POSTGRES_DB,
+                user: process.env.POSTGRES_USER,
+                password: process.env.POSTGRES_PASSWORD,
+                enableVector: process.env.POSTGRES_VECTOR_ENABLED === 'true',
+            },
         };
     }
     loadSecurityConfig() {
@@ -127,8 +146,8 @@ export class ConfigLoader {
             maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'),
             rateLimit: {
                 windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
-                maxRequests: parseInt(process.env.RATE_LIMIT_MAX || '100')
-            }
+                maxRequests: parseInt(process.env.RATE_LIMIT_MAX || '100'),
+            },
         };
     }
     extractFrontmatter(content) {
@@ -144,7 +163,7 @@ export class ConfigLoader {
         return {};
     }
     getDefaultIdentity() {
-        return `---\ndisplayName: Sentinel\nusername: sentinel_bot\nbio: AI Personal Assistant\ntagline: Your trusted AI companion\n---\n`;
+        return `---\ndisplayName: Alpicia\nusername: alpicia_bot\nbio: AI Personal Assistant\ntagline: Your trusted AI companion\n---\n`;
     }
     getDefaultUser() {
         return `---\nid: default\nname: User\nmemoryEnabled: true\n---\n`;

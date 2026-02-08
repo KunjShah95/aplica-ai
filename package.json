@@ -1,5 +1,5 @@
 {
-  "name": "sentinelbot",
+  "name": "alpicia",
   "version": "1.0.0",
   "description": "AI personal assistant with multi-platform messaging, browser automation, and memory persistence",
   "main": "dist/index.js",
@@ -10,6 +10,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:cli": "tsx src/index.ts cli",
     "dev:api": "tsx src/index.ts api",
+    "dev:dashboard": "tsx src/index.ts dashboard",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts",
     "test": "vitest",
@@ -20,7 +21,8 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:seed": "tsx src/init-db.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "audit": "tsx src/scripts/security-audit.ts"
   },
   "keywords": [
     "ai",
@@ -50,6 +52,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@notionhq/client": "^5.9.0",
+    "@octokit/auth-app": "^8.2.0",
+    "@octokit/plugin-throttling": "^11.0.3",
+    "@octokit/rest": "^22.0.1",
+    "@pinecone-database/pinecone": "^7.0.0",
     "@prisma/client": "^5.10.0",
     "@slack/web-api": "^7.0.0",
     "bcryptjs": "^2.4.3",
@@ -66,7 +73,6 @@
     "ioredis": "^5.3.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.3.0",
     "mysql2": "^3.9.1",
     "nodemailer": "^6.9.10",
     "openai": "^4.28.0",
@@ -74,6 +80,7 @@
     "prom-client": "^15.1.0",
     "simple-git": "^3.24.0",
     "uuid": "^9.0.0",
+    "weaviate-ts-client": "^2.2.0",
     "ws": "^8.16.0",
     "yaml": "^2.3.0"
   },

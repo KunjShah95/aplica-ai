@@ -1,6 +1,6 @@
-# SentinelBot Architecture
+# Alpicia Architecture
 
-This document provides a deep dive into SentinelBot's architecture, explaining how each component works and interacts with others.
+This document provides a deep dive into Alpicia's architecture, explaining how each component works and interacts with others.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ This document provides a deep dive into SentinelBot's architecture, explaining h
 
 ## System Overview
 
-SentinelBot follows a layered architecture with clear separation of concerns:
+Alpicia follows a layered architecture with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -673,7 +673,9 @@ class MySkill {
 
 ## Conclusion
 
-SentinelBot's architecture is designed for:
+## Conclusion
+
+Alpicia's architecture is designed for:
 
 1. **Modularity**: Clear separation of concerns
 2. **Extensibility**: Easy to add new features

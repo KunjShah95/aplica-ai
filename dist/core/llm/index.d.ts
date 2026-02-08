@@ -1,24 +1,7 @@
-import { LLMConfig } from '../../config/types';
-export interface LLMMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
-export interface LLMCompletionOptions {
-    maxTokens?: number;
-    temperature?: number;
-    systemPrompt?: string;
-}
-export interface LLMCompletionResult {
-    content: string;
-    tokensUsed: number;
-    model: string;
-}
-export declare abstract class LLMProvider {
-    protected config: LLMConfig;
-    constructor(config: LLMConfig);
-    abstract complete(messages: LLMMessage[], options?: LLMCompletionOptions): Promise<LLMCompletionResult>;
-    abstract stream(messages: LLMMessage[], options?: LLMCompletionOptions): AsyncIterable<string>;
-    abstract isAvailable(): boolean;
-}
+import { LLMConfig } from '../../config/types.js';
+import { LLMProvider } from './base.js';
+export { LLMProvider } from './base.js';
+export type { LLMMessage, LLMCompletionResult, LLMCompletionOptions } from './base.js';
+export { AnthropicProvider } from './providers/anthropic.js';
 export declare function createProvider(config: LLMConfig): LLMProvider;
 //# sourceMappingURL=index.d.ts.map

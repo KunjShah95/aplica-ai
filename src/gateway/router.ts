@@ -6,7 +6,17 @@ export interface RouterMessage {
   content: string;
   userId: string;
   conversationId?: string;
-  source: 'telegram' | 'discord' | 'websocket' | 'cli';
+  source:
+    | 'telegram'
+    | 'discord'
+    | 'websocket'
+    | 'cli'
+    | 'signal'
+    | 'googlechat'
+    | 'msteams'
+    | 'matrix'
+    | 'webchat'
+    | 'slack';
   metadata?: Record<string, unknown>;
   timestamp: Date;
 }
@@ -148,6 +158,21 @@ export class MessageRouter {
     });
   }
 
+  async handleFromSlack(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'slack',
+      timestamp: new Date(),
+    });
+  }
+
   async handleFromCLI(
     userId: string,
     message: string,
@@ -159,6 +184,81 @@ export class MessageRouter {
       userId,
       conversationId,
       source: 'cli',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromSignal(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'signal',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromGoogleChat(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'googlechat',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromMSTeams(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'msteams',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromMatrix(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'matrix',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromWebChat(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'webchat',
       timestamp: new Date(),
     });
   }

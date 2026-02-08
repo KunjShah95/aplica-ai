@@ -3,7 +3,7 @@ import { personaService } from './agents/persona.js';
 import { toolRegistry } from './agents/tools.js';
 
 async function initializeDatabase(): Promise<void> {
-    console.log('Initializing SentinelBot Database...\n');
+    console.log('Initializing Alpicia Database...\n');
 
     try {
         await connectDatabase();

@@ -3,9 +3,9 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'sentinelbot'
+  - job_name: 'alpicia'
     static_configs:
-      - targets: ['sentinelbot:9090']
+      - targets: ['alpicia:9090']
     metrics_path: '/metrics'
 
   - job_name: 'prometheus'

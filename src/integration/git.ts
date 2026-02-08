@@ -1,4 +1,4 @@
-import { simpleGit, SimpleGit, CleanOptions } from 'simple-git';
+import { simpleGit, SimpleGit } from 'simple-git';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -58,7 +58,7 @@ export class GitService {
         baseDir: workdir,
         binary: 'git',
         maxConcurrentProcesses: 10,
-      }).clean(CleanOptions.SHOW_UNTRACKED_FILES | CleanOptions.CLEAN_ALL);
+      });
       this.repos.set(workdir, git);
     }
     return this.repos.get(workdir)!;
@@ -73,7 +73,7 @@ export class GitService {
     const cloneOptions: string[] = [];
 
     if (options?.branch) cloneOptions.push('--branch', options.branch);
-    if (options?.depth) cloneOptions.push('--depth', options.depth);
+    if (options?.depth) cloneOptions.push('--depth', String(options.depth));
 
     await git.clone(repoUrl, targetPath, cloneOptions);
   }
@@ -103,8 +103,8 @@ export class GitService {
     detached: boolean;
     ahead: number;
     behind: number;
-    staged: Array<{ file: string; index: string }>;
-    unstaged: Array<{ file: string; workingTree: string }>;
+    staged: string[];
+    unstaged: string[];
     untracked: string[];
   }> {
     const git = this.getRepo(workdir);
@@ -115,9 +115,9 @@ export class GitService {
       detached: status.detached,
       ahead: status.ahead,
       behind: status.behind,
-      staged: status.staged.map((s) => ({ file: s.index, workingTree: s.workingTree })),
+      staged: status.staged,
       unstaged: status.not_added,
-      untracked: status.untracked,
+      untracked: status.files.filter(f => f.index === '?' && f.working_dir === '?').map(f => f.path),
     };
   }
 
@@ -180,7 +180,8 @@ export class GitService {
 
   async branch(workdir: string, options?: { remote?: boolean }): Promise<BranchInfo[]> {
     const git = this.getRepo(workdir);
-    const branches = await git.branch(options);
+    const branchOptions: string[] = options?.remote ? ['-r'] : [];
+    const branches = await git.branch(branchOptions);
 
     return branches.all.map((name) => ({
       name,
@@ -352,7 +353,7 @@ export class GitService {
 
   async revert(workdir: string, commit: string): Promise<void> {
     const git = this.getRepo(workdir);
-    await git.revert([commit]);
+    await git.revert(commit);
   }
 
   async reset(
@@ -382,9 +383,10 @@ export class GitService {
     const git = this.getRepo(workdir);
     const tags = await git.tags();
 
+    // TagResult only has 'all' and 'latest' properties, no hash info directly available
     return tags.all.map((name) => ({
       name,
-      hash: tags.remotes[name] || '',
+      hash: '', // Hash would require additional git command to fetch
     }));
   }
 
@@ -410,7 +412,11 @@ export class GitService {
 
   async fetch(workdir: string, remote?: string): Promise<void> {
     const git = this.getRepo(workdir);
-    await git.fetch(remote);
+    if (remote) {
+      await git.fetch({ remote });
+    } else {
+      await git.fetch();
+    }
   }
 
   async tagDelete(workdir: string, tagName: string): Promise<void> {
