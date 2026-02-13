@@ -70,7 +70,7 @@ async function main() {
             console.log('      Mode: Full (API + Gateway + Scheduler)\n');
             await apiServer.start();
             await scheduler.start();
-            await import('./workflows/daily-tasks.js').then(m => m.setupDailyTasks());
+            await import('./workflows/daily-tasks.js').then((m) => m.setupDailyTasks());
             const gateway = new GatewayServer(config);
             await gateway.start();
         }

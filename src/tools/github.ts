@@ -131,22 +131,22 @@ export class GitHubTool {
       authStrategy:
         config.appId && config.privateKey && config.installationID
           ? createAppAuth({
-              appId: config.appId,
-              privateKey: config.privateKey,
-              installationID: config.installationID,
-            } as any)
+            appId: config.appId,
+            privateKey: config.privateKey,
+            installationID: config.installationID,
+          } as any)
           : undefined,
       throttle: config.throttle?.enabled
         ? {
-            onRateLimit: (retryAfter: number, options: Record<string, unknown>) => {
-              console.warn(`Rate limit exceeded, retrying in ${retryAfter}s`);
-              return true;
-            },
-            onAbuseLimit: (retryAfter: number, options: Record<string, unknown>) => {
-              console.warn(`Abuse limit detected, retrying in ${retryAfter}s`);
-              return true;
-            },
-          }
+          onRateLimit: (retryAfter: number, options: Record<string, unknown>) => {
+            console.warn(`Rate limit exceeded, retrying in ${retryAfter}s`);
+            return true;
+          },
+          onAbuseLimit: (retryAfter: number, options: Record<string, unknown>) => {
+            console.warn(`Abuse limit detected, retrying in ${retryAfter}s`);
+            return true;
+          },
+        }
         : undefined,
     });
   }
@@ -212,10 +212,15 @@ export class GitHubTool {
             login: issue.user?.login || '',
             avatarUrl: issue.user?.avatar_url || '',
           },
-          labels: issue.labels.map((label) => ({
-            name: (label as any).name,
-            color: (label as any).color,
-          })),
+          labels: issue.labels.map((label) => {
+            if (typeof label === 'string') {
+              return { name: label, color: '' };
+            }
+            return {
+              name: label.name || '',
+              color: label.color || '',
+            };
+          }),
           assignees: (issue.assignees || []).map((user) => ({
             login: user.login || '',
             avatarUrl: user.avatar_url || '',

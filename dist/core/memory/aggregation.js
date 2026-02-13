@@ -3,11 +3,10 @@ import { createProvider } from '../llm/index.js';
 export async function aggregateMemories(config) {
     console.log('[🧠 Memory] Starting aggregation cycle...');
     const llm = createProvider(config.llm);
-    // 1. Fetch recent ephemeral memories (last 24h)
-    // We assume 'postgresMemory' stores raw logs.
-    // For now, let's simulate fetching recent conversations.
+    // 1. Fetch recent ephemeral memories (last 24h) for the current user
     const recentConvos = await db.conversation.findMany({
         where: {
+            userId: config.user.id,
             updatedAt: {
                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
             },
@@ -43,15 +42,13 @@ export async function aggregateMemories(config) {
         { role: 'user', content: prompt },
     ]);
     // 3. Store permanent memory facts
-    // We would store these in a specialized "Facts" table or vector store.
-    // For simplicity, we log them or store as a "Memory" type log.
     console.log('[🧠 Memory] Consolidated Facts:', summary.content);
     await db.memory.create({
         data: {
             type: 'CONVERSATION_SUMMARY',
             content: summary.content,
             metadata: { source: 'daily_aggregation', count: recentConvos.length },
-            userId: 'system',
+            userId: config.user.id,
         },
     });
 }

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "name": "sentinelbot",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "npm run start",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicy": "always"
+  },
+  "env": {
+    "required": ["LLM_API_KEY"],
+    "optional": {
+      "LLM_PROVIDER": "claude",
+      "LLM_MODEL": "claude-sonnet-4-20250514",
+      "TELEGRAM_TOKEN": "",
+      "DISCORD_TOKEN": "",
+      "REDIS_URL": ""
+    }
+  }
+}

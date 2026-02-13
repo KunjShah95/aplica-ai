@@ -266,12 +266,13 @@ class AdvancedDashboard {
         const chars = [' ', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
         const fitData = data.slice(-w);
         return fitData.map(val => {
-            const idx = Math.floor((val / 100) * (chars.length - 1));
+            const clamped = Math.max(0, Math.min(100, val));
+            const idx = Math.floor((clamped / 100) * (chars.length - 1));
             return chars[idx] || chars[0];
         }).join('');
     }
     stripAnsi(str) {
-        return str.replace(/\x1B\[\d+m/g, '');
+        return str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
     }
 }
 export const startDashboard = async () => {

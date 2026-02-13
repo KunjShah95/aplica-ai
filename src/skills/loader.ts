@@ -68,8 +68,11 @@ export class SkillLoader {
     } = {}
   ) {
     this.skillsPath = options.skillsPath || './skills';
-    this.builtinsPath = options.builtinsPath || './src/skills/builtins';
-    this.customPath = options.customPath || './src/skills/custom';
+    const isProd = process.env.NODE_ENV === 'production';
+    this.builtinsPath =
+      options.builtinsPath || (isProd ? './dist/skills/builtins' : './src/skills/builtins');
+    this.customPath =
+      options.customPath || (isProd ? './dist/skills/custom' : './src/skills/custom');
   }
 
   async loadAll(): Promise<void> {
@@ -163,7 +166,8 @@ export class SkillLoader {
       return null;
     }
 
-    const manifest = this.parseManifestSync(manifestPath);
+    const content = fs.readFileSync(manifestPath, 'utf-8');
+    const manifest = await this.parseManifest(content);
     const module = await import(indexPath);
     const executeFn = module.execute || module.default;
 
@@ -186,36 +190,9 @@ export class SkillLoader {
 
     try {
       const yaml = await import('js-yaml');
-      const frontmatter = yaml.load(frontmatterMatch[1]) as Record<string, unknown>;
-
-      return {
-        name: String(frontmatter.name || 'unnamed'),
-        version: String(frontmatter.version || '1.0.0'),
-        description: String(frontmatter.description || ''),
-        author: frontmatter.author as string | undefined,
-        license: frontmatter.license as string | undefined,
-        triggers: this.parseTriggers(frontmatter.triggers),
-        parameters: this.parseParameters(frontmatter.parameters),
-        permissions: Array.isArray(frontmatter.permissions)
-          ? (frontmatter.permissions as string[])
-          : [],
-        examples: Array.isArray(frontmatter.examples) ? (frontmatter.examples as string[]) : [],
-      };
-    } catch (error) {
-      throw new Error(`Failed to parse manifest: ${error}`);
-    }
-  }
-
-  private parseManifestSync(manifestPath: string): SkillManifest {
-    const content = fs.readFileSync(manifestPath, 'utf-8');
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-    if (!frontmatterMatch) {
-      throw new Error('Invalid manifest format');
-    }
-
-    try {
-      const yaml = require('js-yaml');
-      const frontmatter = yaml.load(frontmatterMatch[1]) as Record<string, unknown>;
+      // @ts-ignore
+      const load = yaml.default?.load || yaml.load;
+      const frontmatter = load(frontmatterMatch[1]) as Record<string, unknown>;
 
       return {
         name: String(frontmatter.name || 'unnamed'),

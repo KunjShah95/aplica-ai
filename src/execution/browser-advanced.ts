@@ -248,8 +248,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true, title: await page.title(), url: page.url() };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -278,8 +278,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -325,8 +325,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -346,8 +346,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -371,8 +371,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -394,8 +394,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -419,8 +419,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -441,8 +441,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -462,8 +462,8 @@ export class EnhancedBrowserAutomation {
       await input.setInputFiles(filePath);
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -481,8 +481,8 @@ export class EnhancedBrowserAutomation {
       await page.locator(formSelector).evaluate((form) => (form as HTMLFormElement).submit());
       this.updateSessionActivity(sessionId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -566,8 +566,8 @@ export class EnhancedBrowserAutomation {
       });
 
       return { success: true, text: text || '' };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -588,8 +588,8 @@ export class EnhancedBrowserAutomation {
       });
 
       return { success: true, value: value || undefined };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -612,8 +612,8 @@ export class EnhancedBrowserAutomation {
         });
 
       return { success: true, value };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -631,8 +631,8 @@ export class EnhancedBrowserAutomation {
     try {
       const count = await page.locator(selector).count();
       return { success: true, count };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -650,8 +650,8 @@ export class EnhancedBrowserAutomation {
     try {
       const count = await page.locator(selector).count();
       return { success: true, exists: count > 0 };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -673,8 +673,8 @@ export class EnhancedBrowserAutomation {
 
       const visible = await locator.first().isVisible();
       return { success: true, visible };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -696,8 +696,8 @@ export class EnhancedBrowserAutomation {
       });
 
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -725,8 +725,8 @@ export class EnhancedBrowserAutomation {
       });
 
       return { success: true, url: response?.url() };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -746,8 +746,8 @@ export class EnhancedBrowserAutomation {
       });
 
       return { success: true, response: await response.json().catch(() => response.text()) };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -779,8 +779,8 @@ export class EnhancedBrowserAutomation {
 
       const buffer = await page.screenshot(screenshotOptions);
       return { success: true, data: buffer.toString('base64') };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -812,8 +812,8 @@ export class EnhancedBrowserAutomation {
 
       const buffer = await page.pdf(pdfOptions);
       return { success: true, data: buffer.toString('base64') };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -832,8 +832,8 @@ export class EnhancedBrowserAutomation {
       const result = await page.evaluate(script);
       this.updateSessionActivity(sessionId);
       return { success: true, result };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -859,8 +859,8 @@ export class EnhancedBrowserAutomation {
       ]);
       this.updateSessionActivity(sessionId);
       return { success: true, result };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -1142,8 +1142,8 @@ export class EnhancedBrowserAutomation {
 
       this.updateSessionActivity(sessionId);
       return { success: true, data };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 

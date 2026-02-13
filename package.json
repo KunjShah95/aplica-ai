@@ -11,7 +11,7 @@
     "dev:cli": "tsx src/index.ts cli",
     "dev:api": "tsx src/index.ts api",
     "dev:dashboard": "tsx src/index.ts dashboard",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "format": "prettier --write src/**/*.ts",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
@@ -22,7 +22,8 @@
     "db:seed": "tsx src/init-db.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
-    "audit": "tsx src/scripts/security-audit.ts"
+    "audit": "tsx src/scripts/security-audit.ts",
+    "demo:cowork": "tsx src/examples/cowork-demo.ts"
   },
   "keywords": [
     "ai",

@@ -11,7 +11,7 @@ export class WorkflowEngine {
     registerDefaultHandlers() {
         this.registerHandler('DELAY', async (step) => {
             const delayMs = step.config.delayMs || 1000;
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
             return { delayed: delayMs };
         });
         this.registerHandler('NOTIFICATION', async (step, context) => {
@@ -30,7 +30,9 @@ export class WorkflowEngine {
             const url = this.interpolate(step.config.url, context);
             const method = step.config.method || 'GET';
             const headers = step.config.headers || {};
-            const body = step.config.body ? JSON.stringify(this.interpolateObject(step.config.body, context)) : undefined;
+            const body = step.config.body
+                ? JSON.stringify(this.interpolateObject(step.config.body, context))
+                : undefined;
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json', ...headers },
@@ -47,7 +49,7 @@ export class WorkflowEngine {
             }
             return {
                 status: response.status,
-                headers: Object.fromEntries(response.headers),
+                headers: Object.fromEntries(new Map(Object.entries(response.headers))),
                 body: parsedResponse,
             };
         });
@@ -76,18 +78,20 @@ export class WorkflowEngine {
         this.registerHandler('LLM_PROMPT', async (step, context) => {
             const config = await configLoader.load();
             const provider = createProvider(config.llm);
-            const systemPrompt = step.config.systemPrompt ? this.interpolate(step.config.systemPrompt, context) : 'You are a helpful assistant.';
+            const systemPrompt = step.config.systemPrompt
+                ? this.interpolate(step.config.systemPrompt, context)
+                : 'You are a helpful assistant.';
             const userPrompt = this.interpolate(step.config.prompt, context);
             const result = await provider.complete([
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
+                { role: 'user', content: userPrompt },
             ], {
                 temperature: step.config.temperature || 0.7,
-                maxTokens: step.config.maxTokens || 1000
+                maxTokens: step.config.maxTokens || 1000,
             });
             return {
                 content: result.content,
-                tokensUsed: result.tokensUsed
+                tokensUsed: result.tokensUsed,
             };
         });
         this.registerHandler('TOOL_EXECUTION', async (step, context) => {
@@ -95,14 +99,14 @@ export class WorkflowEngine {
             if (!toolName)
                 throw new Error('Tool name required');
             const tools = await toolRegistry.list();
-            const tool = tools.find(t => t.name === toolName);
+            const tool = tools.find((t) => t.name === toolName);
             if (!tool)
                 throw new Error(`Tool not found: ${toolName}`);
             const input = this.interpolateObject(step.config.input, context);
             const result = await toolRegistry.execute({
                 toolId: tool.id,
                 input,
-                userId: context.variables.userId // Pass userId from context variables
+                userId: context.variables.userId, // Pass userId from context variables
             });
             if (result.status === 'FAILED') {
                 throw new Error(result.error || 'Tool execution failed');
@@ -124,7 +128,7 @@ export class WorkflowEngine {
                 isActive: definition.isEnabled ?? true,
                 userId,
                 triggers: {
-                    create: definition.triggers.map(t => ({
+                    create: definition.triggers.map((t) => ({
                         type: t.type,
                         config: t.config,
                         isActive: true,
@@ -157,7 +161,10 @@ export class WorkflowEngine {
             workflowId,
             executionId: execution.id,
             triggerPayload,
-            variables: workflow.settings || {},
+            variables: {
+                userId: workflow.userId,
+                ...(workflow.settings || {}),
+            },
             stepResults: {},
         };
         this.runExecution(workflow, execution.id, context).catch(console.error);
@@ -170,7 +177,7 @@ export class WorkflowEngine {
         let error;
         try {
             while (currentStepId) {
-                const step = steps.find(s => s.id === currentStepId);
+                const step = steps.find((s) => s.id === currentStepId);
                 if (!step)
                     break;
                 const stepRecord = await db.workflowStep.create({
@@ -180,7 +187,7 @@ export class WorkflowEngine {
                         nodeName: step.name,
                         status: 'RUNNING',
                         startedAt: new Date(),
-                        inputs: step.config
+                        inputs: step.config,
                     },
                 });
                 try {
@@ -243,7 +250,7 @@ export class WorkflowEngine {
             catch (err) {
                 lastError = err instanceof Error ? err : new Error(String(err));
                 if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await new Promise((resolve) => setTimeout(resolve, delay));
                     delay *= step.retryConfig?.backoffMultiplier || 1;
                 }
             }

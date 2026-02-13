@@ -325,13 +325,14 @@ class AdvancedDashboard {
         const chars = [' ', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
         const fitData = data.slice(-w);
         return fitData.map(val => {
-            const idx = Math.floor((val / 100) * (chars.length - 1));
+            const clamped = Math.max(0, Math.min(100, val));
+            const idx = Math.floor((clamped / 100) * (chars.length - 1));
             return chars[idx] || chars[0];
         }).join('');
     }
 
     private stripAnsi(str: string): string {
-        return str.replace(/\x1B\[\d+m/g, '');
+        return str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
     }
 }
 
@@ -339,7 +340,7 @@ export const startDashboard = async () => {
     const dashboard = new AdvancedDashboard();
 
     // Simulate background traffic
-    setInterval(() => {
+    const trafficInterval = setInterval(() => {
         if (Math.random() > 0.7) {
             const sources = ['NETWORK', 'DB', 'SECURITY', 'SYSTEM'];
             const msgs = ['Heartbeat OK', 'Index optimized', 'Scan complete', 'GC running'];
@@ -348,5 +349,9 @@ export const startDashboard = async () => {
         }
     }, 2000);
 
-    await dashboard.start();
+    try {
+        await dashboard.start();
+    } finally {
+        clearInterval(trafficInterval);
+    }
 };

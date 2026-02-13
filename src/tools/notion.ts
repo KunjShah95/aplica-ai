@@ -1,5 +1,41 @@
 import { Client } from '@notionhq/client';
 
+interface NotionPageResponse {
+  object: 'page';
+  id: string;
+  created_time: string;
+  last_edited_time: string;
+  created_by: { object: 'user'; id: string };
+  last_edited_by: { object: 'user'; id: string };
+  cover: { type: string; external?: { url: string }; file?: { url: string } } | null;
+  icon: { type: string; emoji?: string; external?: { url: string }; file?: { url: string } } | null;
+  parent: { type: string; page_id?: string; database_id?: string };
+  archived: boolean;
+  properties: Record<string, any>;
+  url: string;
+  title?: Array<{ plain_text: string }>;
+}
+
+interface NotionDatabaseResponse {
+  object: 'database';
+  id: string;
+  created_time: string;
+  last_edited_time: string;
+  title: Array<{ plain_text: string }>;
+  description: Array<{ plain_text: string }>;
+  icon: { type: string; emoji?: string } | null;
+  cover: { type: string; external?: { url: string }; file?: { url: string } } | null;
+  properties: Record<string, any>;
+  url: string;
+}
+
+interface NotionSearchResponseRaw {
+  object: 'list';
+  results: (NotionPageResponse | NotionDatabaseResponse)[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
 export interface NotionConfig {
   apiKey: string;
 }
@@ -86,7 +122,7 @@ export class NotionTool {
         sort: options?.sort,
         page_size: options?.pageSize || 100,
         start_cursor: options?.startCursor,
-      })) as any;
+      })) as unknown as NotionSearchResponseRaw;
 
       return {
         object: 'list',
@@ -102,7 +138,7 @@ export class NotionTool {
 
   async getPage(pageId: string): Promise<Page | null> {
     try {
-      const page = (await this.client.pages.retrieve({ page_id: pageId })) as any;
+      const page = (await this.client.pages.retrieve({ page_id: pageId })) as unknown as NotionPageResponse;
 
       return {
         id: page.id,
@@ -145,9 +181,9 @@ export class NotionTool {
         cover: options.cover ? { external: { url: options.cover } } : undefined,
         properties: this.buildProperties(options.title, options.properties),
         children: options.children,
-      } as any);
+      } as any) as unknown as NotionPageResponse;
 
-      const createdPage = page as any;
+      const createdPage = page;
       return {
         id: createdPage.id,
         url: `https://notion.so/${createdPage.id.replace(/-/g, '')}`,
@@ -187,7 +223,7 @@ export class NotionTool {
       const page = (await this.client.pages.update({
         page_id: pageId,
         ...updates,
-      })) as any;
+      })) as unknown as NotionPageResponse;
 
       return {
         id: page.id,
@@ -289,7 +325,7 @@ export class NotionTool {
     try {
       const database = (await this.client.databases.retrieve({
         database_id: databaseId,
-      })) as any;
+      })) as unknown as NotionDatabaseResponse;
 
       const properties: Record<string, DatabaseProperty> = {};
       for (const [key, prop] of Object.entries(database.properties)) {

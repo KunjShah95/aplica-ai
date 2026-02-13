@@ -123,7 +123,7 @@ export class S3StorageProvider {
                 'Content-Type': options.mimeType,
                 'x-amz-content-sha256': crypto.createHash('sha256').update(buffer).digest('hex'),
             },
-            body: buffer,
+            body: new Uint8Array(buffer),
         });
         if (!response.ok) {
             throw new Error(`S3 upload failed: ${response.statusText}`);

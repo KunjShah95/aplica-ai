@@ -141,6 +141,16 @@ export class FilesystemTool {
       }
 
       const encoding = options?.encoding || this.DEFAULT_ENCODING;
+      const contentSize = Buffer.byteLength(content, encoding);
+
+      if (contentSize > this.maxFileSize) {
+        return {
+          success: false,
+          path: filePath,
+          bytesWritten: 0,
+        };
+      }
+
       const bytesWritten = fs.writeFileSync(resolvedPath, content, {
         encoding,
         flag: 'w',
@@ -165,6 +175,28 @@ export class FilesystemTool {
     try {
       const resolvedPath = this.resolvePath(filePath);
       this.validatePath(resolvedPath);
+
+      const contentSize = Buffer.byteLength(content, 'utf-8');
+      
+      try {
+        const stats = fs.statSync(resolvedPath);
+        if (stats.size + contentSize > this.maxFileSize) {
+          return {
+            success: false,
+            path: filePath,
+            bytesWritten: 0,
+          };
+        }
+      } catch {
+        // File doesn't exist, check against maxFileSize directly
+        if (contentSize > this.maxFileSize) {
+          return {
+            success: false,
+            path: filePath,
+            bytesWritten: 0,
+          };
+        }
+      }
 
       const dir = path.dirname(resolvedPath);
       if (!fs.existsSync(dir)) {
@@ -312,7 +344,7 @@ export class FilesystemTool {
           }
         }
       }
-    } catch {}
+    } catch { }
   }
 
   async searchInFiles(

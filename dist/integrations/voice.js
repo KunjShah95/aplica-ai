@@ -31,7 +31,7 @@ export class VoiceService {
     }
     async speechToText(audioBuffer, options = {}) {
         const { model = 'whisper-1', language, prompt, temperature } = options;
-        const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+        const file = new File([new Uint8Array(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
         const response = await this.client.audio.transcriptions.create({
             model,
             file,
@@ -57,7 +57,7 @@ export class VoiceService {
     }
     async translate(audioBuffer, options = {}) {
         const { model = 'whisper-1', prompt, temperature } = options;
-        const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+        const file = new File([new Uint8Array(audioBuffer)], 'audio.webm', { type: 'audio/webm' });
         const response = await this.client.audio.translations.create({
             model,
             file,
@@ -95,7 +95,7 @@ export class OllamaVoiceService {
     }
     async speechToText(audioBuffer) {
         const formData = new FormData();
-        formData.append('file', new Blob([audioBuffer]));
+        formData.append('file', new Blob([new Uint8Array(audioBuffer)]));
         const response = await fetch(`${this.baseUrl}/api/stt`, {
             method: 'POST',
             body: formData,
@@ -103,7 +103,7 @@ export class OllamaVoiceService {
         if (!response.ok) {
             throw new Error(`Ollama STT failed: ${response.statusText}`);
         }
-        const data = await response.json();
+        const data = (await response.json());
         return { text: data.text };
     }
 }

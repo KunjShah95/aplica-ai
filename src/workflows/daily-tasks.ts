@@ -20,7 +20,7 @@ export async function setupDailyTasks() {
                 name: 'Run Security Audit',
                 type: 'TOOL_EXECUTION',
                 config: {
-                    tool: 'shell',
+                    tool: 'run_shell',
                     input: {
                         command: 'npm',
                         args: ['run', 'audit']
@@ -63,7 +63,7 @@ export async function setupDailyTasks() {
                 name: 'Dump Database',
                 type: 'TOOL_EXECUTION',
                 config: {
-                    tool: 'shell',
+                    tool: 'run_shell',
                     input: {
                         command: 'npm',
                         args: ['run', 'db:backup']

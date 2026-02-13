@@ -65,19 +65,15 @@ async function evaluateCode(code: string, input?: Record<string, unknown>): Prom
     ...input,
   };
 
-  const contextKeys = Object.keys(context);
-  const contextValues = Object.values(context);
+  // Use vm.runInNewContext which provides a sandboxed environment
+  // We wrap code in an IIFE to allow 'return' statements
+  const wrappedCode = `(function() {
+    'use strict';
+    ${code}
+  })()`;
 
-  const wrappedCode = `
-    (function(args) {
-      'use strict';
-      const { ${contextKeys.join(', ')} } = args;
-      ${code}
-    })
-  `;
-
-  const fn = eval(wrappedCode);
-  return fn(contextValues);
+  const vm = require('vm');
+  return vm.runInNewContext(wrappedCode, context);
 }
 
 execute()

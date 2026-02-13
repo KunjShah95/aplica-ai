@@ -50,7 +50,9 @@ export class VoiceService {
         }
         const response = await this.openai.audio.transcriptions.create({
             model: options.model || 'whisper-1',
-            file: new File([options.audioBuffer], 'audio.mp3', { type: 'audio/mp3' }),
+            file: new File([new Blob([new Uint8Array(options.audioBuffer)])], 'audio.mp3', {
+                type: 'audio/mp3',
+            }),
             language: options.language,
             prompt: options.prompt,
             temperature: options.temperature,
@@ -68,7 +70,7 @@ export class VoiceService {
         }
         const response = await this.openai.audio.translations.create({
             model: 'whisper-1',
-            file: new File([audioBuffer], 'audio.mp3', { type: 'audio/mp3' }),
+            file: new File([new Uint8Array(audioBuffer)], 'audio.mp3', { type: 'audio/mp3' }),
         });
         return {
             text: response.text || '',

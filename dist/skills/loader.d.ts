@@ -64,7 +64,6 @@ export declare class SkillLoader {
     private loadCustomSkills;
     private loadCustomSkill;
     private parseManifest;
-    private parseManifestSync;
     private parseTriggers;
     private parseParameters;
     getSkill(name: string): Skill | undefined;

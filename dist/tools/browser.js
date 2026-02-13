@@ -379,7 +379,7 @@ export class BrowserTool {
         const requests = [];
         this.page.on('request', (request) => {
             requests.push({
-                id: request.id(),
+                id: request.id || request.url(),
                 url: request.url(),
                 method: request.method(),
                 headers: request.headers(),

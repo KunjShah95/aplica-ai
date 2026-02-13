@@ -55,7 +55,7 @@ export class ShellTool {
         'pwd',
         'mkdir',
         'touch',
-        'rm',
+
         'cp',
         'mv',
         'head',
@@ -104,9 +104,7 @@ export class ShellTool {
         'unzip',
         'rsync',
         'scp',
-        'ssh',
-        'chmod',
-        'chown',
+
         'chgrp',
         'ln',
         'readlink',
@@ -147,15 +145,39 @@ export class ShellTool {
         'halt',
         'poweroff',
         'systemctl',
+        'rm',
+        'ssh',
+        'chmod',
+        'chown',
       ]
     );
     this.commandHistory = new Map();
+  }
+
+  private executionTimestamps: number[] = [];
+  private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
+  private readonly MAX_COMMANDS_PER_WINDOW = 20;
+
+  private checkRateLimit(): void {
+    const now = Date.now();
+    this.executionTimestamps = this.executionTimestamps.filter(
+      (t) => now - t < this.RATE_LIMIT_WINDOW
+    );
+
+    if (this.executionTimestamps.length >= this.MAX_COMMANDS_PER_WINDOW) {
+      throw new Error(
+        `Rate limit exceeded: Max ${this.MAX_COMMANDS_PER_WINDOW} commands per minute.`
+      );
+    }
+
+    this.executionTimestamps.push(now);
   }
 
   async execute(command: string, options?: CommandOptions): Promise<CommandResult> {
     const startTime = Date.now();
 
     try {
+      this.checkRateLimit();
       this.validateCommand(command);
 
       const { stdout, stderr } = await execAsync(command, {
@@ -179,7 +201,7 @@ export class ShellTool {
       return result;
     } catch (error: any) {
       const result: CommandResult = {
-        success: error.code === 0,
+        success: false,
         command,
         exitCode: error.code || null,
         stdout: error.stdout?.toString() || '',
@@ -196,6 +218,7 @@ export class ShellTool {
     const startTime = Date.now();
 
     try {
+      this.checkRateLimit();
       this.validateCommand(command);
 
       const stdout = execSync(command, {
@@ -238,6 +261,7 @@ export class ShellTool {
     onData?: (data: string, type: 'stdout' | 'stderr') => void,
     options?: CommandOptions
   ): Promise<StreamingResult> {
+    this.checkRateLimit();
     this.validateCommand(command);
 
     const parts = this.parseCommand(command);
@@ -291,6 +315,7 @@ export class ShellTool {
   }
 
   async backgroundExecute(command: string, options?: CommandOptions): Promise<ProcessInfo> {
+    this.checkRateLimit();
     this.validateCommand(command);
 
     const parts = this.parseCommand(command);

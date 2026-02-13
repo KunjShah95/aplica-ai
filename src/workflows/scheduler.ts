@@ -27,6 +27,7 @@ export interface CreateTaskInput {
 export class Scheduler {
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private running = false;
+  private pollTimeout?: ReturnType<typeof setTimeout>;
 
   async start(): Promise<void> {
     if (this.running) return;
@@ -42,6 +43,12 @@ export class Scheduler {
     for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
+
+    if (this.pollTimeout) {
+      clearTimeout(this.pollTimeout);
+      this.pollTimeout = undefined;
+    }
+
     this.timers.clear();
     console.log('Scheduler stopped');
   }
@@ -151,7 +158,7 @@ export class Scheduler {
       }
 
       if (this.running) {
-        setTimeout(poll, 10000);
+        this.pollTimeout = setTimeout(poll, 10000);
       }
     };
 

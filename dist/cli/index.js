@@ -2,7 +2,7 @@
 import * as readline from 'readline';
 import { configLoader } from '../config/loader.js';
 import { createProvider } from '../core/llm/index.js';
-import { handleChat, handleStatus, handleConfig, handleHelp } from './commands.js';
+import { handleChat, handleStatus, handleConfig, handleHelp, handleViral, handleShare, } from './commands.js';
 export async function startCLI(config) {
     const llm = createProvider(config.llm);
     if (!llm.isAvailable()) {
@@ -14,13 +14,16 @@ export async function startCLI(config) {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
-        prompt: '> '
+        prompt: '> ',
     });
-    console.log('Alpicia ready!');
+    console.log('🚀 Alpicia ready!');
     console.log("Type 'help' for available commands.\n");
     rl.prompt();
     rl.on('line', async (input) => {
-        const command = input.trim().toLowerCase();
+        const trimmed = input.trim().toLowerCase();
+        const parts = trimmed.split(/\s+/);
+        const command = parts[0];
+        const args = parts.slice(1);
         switch (command) {
             case 'chat':
                 await rl.close();
@@ -31,6 +34,19 @@ export async function startCLI(config) {
                 break;
             case 'config':
                 await handleConfig(context);
+                break;
+            case 'viral':
+                await handleViral(context);
+                break;
+            case 'share':
+                if (args[0]) {
+                    await handleShare(context, args[0]);
+                }
+                else {
+                    console.log('\n📢 Share Alpicia on social media!');
+                    console.log('Usage: share <platform>');
+                    console.log('Platforms: twitter, github, discord, linkedin\n');
+                }
                 break;
             case 'help':
                 await handleHelp();
@@ -53,7 +69,7 @@ export async function startCLI(config) {
     });
 }
 async function main() {
-    console.log('\nAlpicia CLI');
+    console.log('\n🚀 Alpicia CLI');
     console.log('Loading configuration...\n');
     try {
         const config = await configLoader.load();

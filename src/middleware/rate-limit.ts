@@ -34,6 +34,7 @@ export class RateLimiter {
         };
 
         this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+        this.cleanupInterval.unref();
     }
 
     check(key: string): { allowed: boolean; info: RateLimitInfo } {

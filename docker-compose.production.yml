@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  sentinelbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinelbot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - DISCORD_ENABLED=${DISCORD_ENABLED}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - WS_ENABLED=true
+      - WS_PORT=3001
+      - OPENAI_API_ENABLED=true
+      - OPENAI_API_PORT=3002
+      - SANDBOX_ENABLED=${SANDBOX_ENABLED}
+      - MEMORY_TYPE=sqlite
+      - SCHEDULER_ENABLED=true
+    volumes:
+      - ./memory:/app/memory
+      - ./skills:/app/skills
+      - ./logs:/app/logs
+    networks:
+      - sentinelbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinelbot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sentinelbot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  sentinelbot-network:
+    driver: bridge
+
+volumes:
+  redis-data:

@@ -7,8 +7,11 @@ export class SkillLoader {
     customPath;
     constructor(options = {}) {
         this.skillsPath = options.skillsPath || './skills';
-        this.builtinsPath = options.builtinsPath || './src/skills/builtins';
-        this.customPath = options.customPath || './src/skills/custom';
+        const isProd = process.env.NODE_ENV === 'production';
+        this.builtinsPath =
+            options.builtinsPath || (isProd ? './dist/skills/builtins' : './src/skills/builtins');
+        this.customPath =
+            options.customPath || (isProd ? './dist/skills/custom' : './src/skills/custom');
     }
     async loadAll() {
         await Promise.all([this.loadBuiltinSkills(), this.loadCustomSkills()]);
@@ -86,7 +89,8 @@ export class SkillLoader {
             console.warn(`Skill ${skillDir} missing index.js or index.ts`);
             return null;
         }
-        const manifest = this.parseManifestSync(manifestPath);
+        const content = fs.readFileSync(manifestPath, 'utf-8');
+        const manifest = await this.parseManifest(content);
         const module = await import(indexPath);
         const executeFn = module.execute || module.default;
         if (typeof executeFn !== 'function') {
@@ -105,34 +109,9 @@ export class SkillLoader {
         }
         try {
             const yaml = await import('js-yaml');
-            const frontmatter = yaml.load(frontmatterMatch[1]);
-            return {
-                name: String(frontmatter.name || 'unnamed'),
-                version: String(frontmatter.version || '1.0.0'),
-                description: String(frontmatter.description || ''),
-                author: frontmatter.author,
-                license: frontmatter.license,
-                triggers: this.parseTriggers(frontmatter.triggers),
-                parameters: this.parseParameters(frontmatter.parameters),
-                permissions: Array.isArray(frontmatter.permissions)
-                    ? frontmatter.permissions
-                    : [],
-                examples: Array.isArray(frontmatter.examples) ? frontmatter.examples : [],
-            };
-        }
-        catch (error) {
-            throw new Error(`Failed to parse manifest: ${error}`);
-        }
-    }
-    parseManifestSync(manifestPath) {
-        const content = fs.readFileSync(manifestPath, 'utf-8');
-        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-        if (!frontmatterMatch) {
-            throw new Error('Invalid manifest format');
-        }
-        try {
-            const yaml = require('js-yaml');
-            const frontmatter = yaml.load(frontmatterMatch[1]);
+            // @ts-ignore
+            const load = yaml.default?.load || yaml.load;
+            const frontmatter = load(frontmatterMatch[1]);
             return {
                 name: String(frontmatter.name || 'unnamed'),
                 version: String(frontmatter.version || '1.0.0'),

@@ -528,7 +528,7 @@ export class BrowserTool {
 
     this.page.on('request', (request) => {
       requests.push({
-        id: request.id(),
+        id: (request as any).id || request.url(),
         url: request.url(),
         method: request.method(),
         headers: request.headers(),

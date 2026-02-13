@@ -13,7 +13,7 @@ export class SlackClient {
             },
             body: body ? JSON.stringify(body) : undefined,
         });
-        const data = await response.json();
+        const data = (await response.json());
         if (!data.ok) {
             throw new Error(`Slack API error: ${data.error}`);
         }
@@ -93,7 +93,7 @@ export class SlackClient {
     }
     async getChannelInfo(channelId) {
         return this.request('conversations.info', {
-            channel: channelId
+            channel: channelId,
         });
     }
     async listChannels(limit = 100) {
@@ -109,7 +109,7 @@ export class SlackClient {
             formData.append('content', options.content);
         }
         if (options.file) {
-            formData.append('file', new Blob([options.file]), options.filename || 'file');
+            formData.append('file', new Blob([new Uint8Array(options.file)]), options.filename || 'file');
         }
         if (options.title) {
             formData.append('title', options.title);
@@ -120,7 +120,7 @@ export class SlackClient {
         const response = await fetch(`${this.baseUrl}/files.upload`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${this.token}`,
+                Authorization: `Bearer ${this.token}`,
             },
             body: formData,
         });
@@ -169,10 +169,14 @@ export class SlackClient {
         return {
             channel: '',
             blocks,
-            attachments: options.color ? [{
-                    color: options.color,
-                    fallback: options.title,
-                }] : undefined,
+            attachments: options.color
+                ? [
+                    {
+                        color: options.color,
+                        fallback: options.title,
+                    },
+                ]
+                : undefined,
         };
     }
 }

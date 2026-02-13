@@ -1,259 +1,284 @@
-import { db } from '../db/index.js';
-import { Prisma } from '@prisma/client';
-import { TeamRole } from '../types/prisma-types.js';
+import {
+  Injectable,
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+} from "../core/errors";
+import { v4 as uuidv4 } from "crypto";
+import { db } from "../database";
+import {
+  Team,
+  User,
+  Invite,
+  ApiKey,
+  userRolePermissions,
+  AuthenticatedUser,
+  UserRole,
+} from "./types";
 
-export interface CreateTeamInput {
-  name: string;
-  slug: string;
-  description?: string;
-  ownerId: string;
-}
-
-export interface CreateWorkspaceInput {
-  teamId: string;
-  name: string;
-  description?: string;
-  settings?: Record<string, unknown>;
-}
-
-export interface InviteMemberInput {
-  teamId: string;
-  userId: string;
-  role?: TeamRole;
-}
-
+@Injectable()
 export class TeamService {
-  async createTeam(input: CreateTeamInput) {
-    const existingSlug = await db.team.findUnique({
-      where: { slug: input.slug },
-    });
+  async createTeam(
+    owner: AuthenticatedUser,
+    data: { name: string; slug?: string },
+  ): Promise<Team> {
+    const slug =
+      data.slug ??
+      data.name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
 
-    if (existingSlug) {
-      throw new Error('Team slug already exists');
+    const existing = await db.team.findUnique({ where: { slug } });
+    if (existing) {
+      throw new ConflictError("Team slug already exists");
     }
 
     const team = await db.team.create({
       data: {
-        name: input.name,
-        slug: input.slug,
-        description: input.description,
-        ownerId: input.ownerId,
-        members: {
-          create: {
-            userId: input.ownerId,
-            role: TeamRole.OWNER,
-          },
+        id: crypto.randomUUID(),
+        name: data.name,
+        slug,
+        ownerId: owner.id,
+        plan: "free",
+        settings: {
+          defaultRole: "developer",
+          requireApproval: false,
+          maxWorkflows: 10,
+          allowApiAccess: true,
+          auditRetentionDays: 30,
         },
       },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, username: true, displayName: true, avatar: true } },
-          },
-        },
+    });
+
+    await db.teamMember.create({
+      data: {
+        id: crypto.randomUUID(),
+        teamId: team.id,
+        userId: owner.id,
+        role: "owner",
+        createdAt: new Date(),
       },
     });
 
     return team;
   }
 
-  async getTeam(id: string) {
-    return db.team.findUnique({
-      where: { id },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, username: true, displayName: true, avatar: true } },
-          },
-        },
-        workspaces: {
-          select: { id: true, name: true, description: true },
-        },
-        _count: { select: { members: true, workspaces: true } },
+  async getTeam(teamId: string): Promise<Team | null> {
+    return db.team.findUnique({ where: { id: teamId } });
+  }
+
+  async updateTeam(
+    teamId: string,
+    data: Partial<Team>,
+    user: AuthenticatedUser,
+  ): Promise<Team> {
+    if (!hasPermission(user, "settings:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
+    }
+
+    return db.team.update({
+      where: { id: teamId },
+      data: {
+        ...data,
+        updatedAt: new Date(),
       },
     });
   }
 
-  async getTeamBySlug(slug: string) {
-    return db.team.findUnique({
-      where: { slug },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, username: true, displayName: true, avatar: true } },
-          },
-        },
-        _count: { select: { members: true, workspaces: true } },
-      },
-    });
-  }
-
-  async listUserTeams(userId: string) {
+  async listTeamMembers(
+    teamId: string,
+  ): Promise<(User & { role: UserRole })[]> {
     const memberships = await db.teamMember.findMany({
-      where: { userId },
-      include: {
-        team: {
-          include: {
-            _count: { select: { members: true, workspaces: true } },
-          },
-        },
-      },
-      orderBy: { joinedAt: 'desc' },
+      where: { teamId },
+      include: { user: true },
     });
 
-    return memberships.map((m: any) => ({
-      ...m.team,
-      role: m.role,
-      joinedAt: m.joinedAt,
+    return memberships.map((m) => ({
+      ...m.user,
+      role: m.role as UserRole,
     }));
   }
 
-  async updateTeam(id: string, data: { name?: string; description?: string; avatar?: string }) {
-    return db.team.update({
-      where: { id },
-      data,
-    });
-  }
-
-  async deleteTeam(id: string) {
-    return db.team.delete({
-      where: { id },
-    });
-  }
-
-  async inviteMember(input: InviteMemberInput) {
-    const existing = await db.teamMember.findUnique({
-      where: {
-        teamId_userId: {
-          teamId: input.teamId,
-          userId: input.userId,
-        },
-      },
-    });
-
-    if (existing) {
-      throw new Error('User is already a member of this team');
+  async addTeamMember(
+    teamId: string,
+    email: string,
+    role: UserRole,
+    invitedBy: AuthenticatedUser,
+  ): Promise<Invite> {
+    if (!hasPermission(invitedBy, "users:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
     }
 
-    return db.teamMember.create({
+    const invite = await db.invite.create({
       data: {
-        teamId: input.teamId,
-        userId: input.userId,
-        role: input.role || TeamRole.MEMBER,
-      },
-      include: {
-        user: { select: { id: true, username: true, displayName: true, avatar: true } },
+        id: crypto.randomUUID(),
+        teamId,
+        email,
+        role,
+        token: crypto.randomUUID() + crypto.randomUUID(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdBy: invitedBy.id,
       },
     });
+
+    return invite;
   }
 
-  async updateMemberRole(teamId: string, userId: string, role: TeamRole) {
-    return db.teamMember.update({
-      where: {
-        teamId_userId: { teamId, userId },
-      },
-      data: { role },
-    });
-  }
-
-  async removeMember(teamId: string, userId: string) {
-    const team = await db.team.findUnique({ where: { id: teamId } });
-    if (team?.ownerId === userId) {
-      throw new Error('Cannot remove team owner');
+  async removeTeamMember(
+    teamId: string,
+    userId: string,
+    removedBy: AuthenticatedUser,
+  ): Promise<void> {
+    if (!hasPermission(removedBy, "users:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
     }
 
-    return db.teamMember.delete({
-      where: {
-        teamId_userId: { teamId, userId },
-      },
-    });
-  }
-
-  async checkMembership(teamId: string, userId: string): Promise<TeamRole | null> {
-    const member = await db.teamMember.findUnique({
-      where: {
-        teamId_userId: { teamId, userId },
-      },
-    });
-
-    return (member?.role as any) || null;
-  }
-
-  async createWorkspace(input: CreateWorkspaceInput) {
-    return db.workspace.create({
-      data: {
-        teamId: input.teamId,
-        name: input.name,
-        description: input.description,
-        settings: (input.settings as any) || {},
-      },
-    });
-  }
-
-  async getWorkspace(id: string) {
-    return db.workspace.findUnique({
-      where: { id },
-      include: {
-        team: { select: { id: true, name: true, slug: true } },
-        knowledgeBases: {
-          select: { id: true, name: true, description: true },
-        },
-        _count: { select: { conversations: true, knowledgeBases: true } },
-      },
-    });
-  }
-
-  async listWorkspaces(teamId: string) {
-    return db.workspace.findMany({
-      where: { teamId },
-      include: {
-        _count: { select: { conversations: true, knowledgeBases: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async updateWorkspace(
-    id: string,
-    data: { name?: string; description?: string; settings?: Record<string, unknown> }
-  ) {
-    return db.workspace.update({
-      where: { id },
-      data: {
-        ...data,
-        settings: data.settings as any,
-      },
-    });
-  }
-
-  async deleteWorkspace(id: string) {
-    return db.workspace.delete({
-      where: { id },
-    });
-  }
-
-  async transferOwnership(teamId: string, newOwnerId: string) {
-    const membership = await db.teamMember.findUnique({
-      where: {
-        teamId_userId: { teamId, userId: newOwnerId },
-      },
+    const membership = await db.teamMember.findFirst({
+      where: { teamId, userId },
     });
 
     if (!membership) {
-      throw new Error('New owner must be a team member');
+      throw new NotFoundError("User is not a team member");
     }
 
-    return db.$transaction([
-      db.team.update({
-        where: { id: teamId },
-        data: { ownerId: newOwnerId },
-      }),
-      db.teamMember.update({
-        where: { teamId_userId: { teamId, userId: newOwnerId } },
-        data: { role: TeamRole.OWNER },
-      }),
-    ]);
+    if (membership.role === "owner") {
+      throw new ConflictError("Cannot remove team owner");
+    }
+
+    await db.teamMember.delete({ where: { id: membership.id } });
+  }
+
+  async updateMemberRole(
+    teamId: string,
+    userId: string,
+    newRole: UserRole,
+    updatedBy: AuthenticatedUser,
+  ): Promise<void> {
+    if (!hasPermission(updatedBy, "users:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
+    }
+
+    const membership = await db.teamMember.findFirst({
+      where: { teamId, userId },
+    });
+
+    if (!membership) {
+      throw new NotFoundError("User is not a team member");
+    }
+
+    if (membership.role === "owner" && newRole !== "owner") {
+      throw new ConflictError("Cannot demote team owner");
+    }
+
+    await db.teamMember.update({
+      where: { id: membership.id },
+      data: { role: newRole },
+    });
+  }
+
+  async acceptInvite(token: string, user: AuthenticatedUser): Promise<void> {
+    const invite = await db.invite.findUnique({
+      where: { token },
+    });
+
+    if (!invite) {
+      throw new NotFoundError("Invite not found");
+    }
+
+    if (invite.expiresAt < new Date()) {
+      throw new ConflictError("Invite has expired");
+    }
+
+    await db.teamMember.create({
+      data: {
+        id: crypto.randomUUID(),
+        teamId: invite.teamId,
+        userId: user.id,
+        role: invite.role,
+        createdAt: new Date(),
+      },
+    });
+
+    await db.invite.delete({ where: { id: invite.id } });
+  }
+
+  async createApiKey(
+    teamId: string,
+    name: string,
+    permissions: string[],
+    user: AuthenticatedUser,
+  ): Promise<ApiKey> {
+    if (!hasPermission(user, "api:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
+    }
+
+    const prefix = `sb_${Date.now().toString(36)}`;
+    const key = `sk_${prefix}_${crypto.randomBytes(24).toString("hex")}`;
+    const keyHash = await hashKey(key);
+
+    const apiKey = await db.apiKey.create({
+      data: {
+        id: crypto.randomUUID(),
+        teamId,
+        name,
+        keyHash,
+        prefix,
+        permissions,
+        expiresAt: null,
+        createdAt: new Date(),
+      },
+    });
+
+    return { ...apiKey, key };
+  }
+
+  async listApiKeys(teamId: string): Promise<Omit<ApiKey, "keyHash">[]> {
+    const keys = await db.apiKey.findMany({
+      where: { teamId },
+      select: {
+        id: true,
+        teamId: true,
+        name: true,
+        prefix: true,
+        permissions: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        createdAt: true,
+      },
+    });
+
+    return keys;
+  }
+
+  async revokeApiKey(keyId: string, user: AuthenticatedUser): Promise<void> {
+    if (!hasPermission(user, "api:write")) {
+      throw new UnauthorizedError("Insufficient permissions");
+    }
+
+    await db.apiKey.delete({ where: { id: keyId } });
+  }
+
+  async getAuditLogs(
+    teamId: string,
+    options: { userId?: string; action?: string; limit?: number },
+  ): Promise<any[]> {
+    return db.auditLog.findMany({
+      where: {
+        teamId,
+        ...(options.userId && { userId: options.userId }),
+        ...(options.action && { action: options.action }),
+      },
+      orderBy: { createdAt: "desc" },
+      take: options.limit ?? 100,
+    });
   }
 }
 
-export const teamService = new TeamService();
+function hashKey(key: string): Promise<string> {
+  return Promise.resolve(`hash_${key.substring(0, 16)}`);
+}
+
+function hasPermission(user: AuthenticatedUser, permission: string): boolean {
+  return user.permissions.includes(permission);
+}

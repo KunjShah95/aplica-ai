@@ -779,18 +779,28 @@ export class EnhancedBrowserAutomation {
         const page = await this.getPage(sessionId);
         if (!page)
             return null;
-        // Use Playwright's accessibility snapshot API
-        const snapshot = await page.accessibility.snapshot();
-        function buildAccessibilityTree(node) {
-            if (!node)
-                return null;
-            return {
-                role: node.role,
-                name: node.name,
-                children: (node.children || []).map(buildAccessibilityTree).filter(Boolean),
-            };
-        }
-        return buildAccessibilityTree(snapshot);
+        // Use DOM-based accessibility extraction since page.accessibility is deprecated
+        return await page.evaluate(() => {
+            function buildAccessibilityTree(element) {
+                const role = element.getAttribute('role') || element.tagName.toLowerCase();
+                const name = element.getAttribute('aria-label') ||
+                    element.getAttribute('aria-labelledby') ||
+                    element.innerText?.substring(0, 100) || '';
+                const children = [];
+                for (const child of Array.from(element.children)) {
+                    const childTree = buildAccessibilityTree(child);
+                    if (childTree) {
+                        children.push(childTree);
+                    }
+                }
+                return {
+                    role,
+                    name: name.trim(),
+                    children: children.length > 0 ? children : undefined,
+                };
+            }
+            return buildAccessibilityTree(document.body);
+        });
     }
     async recordVideo(sessionId, outputPath) {
         const session = this.sessions.get(sessionId);

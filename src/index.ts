@@ -27,7 +27,7 @@ async function main(): Promise<void> {
     if (process.argv[2] !== 'dashboard') {
       console.log('[2/6] Initializing embedding provider...');
       // ... (existing embedding logic)
-      const embeddingType = process.env.EMBEDDING_PROVIDER as 'openai' | 'ollama' || 'openai';
+      const embeddingType = (process.env.EMBEDDING_PROVIDER as 'openai' | 'ollama') || 'openai';
       if (process.env.OPENAI_API_KEY || embeddingType === 'ollama') {
         const embeddingProvider = createEmbeddingProvider(embeddingType);
         postgresMemory.setEmbeddingProvider(embeddingProvider);
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       console.log('      Mode: Full (API + Gateway + Scheduler)\n');
       await apiServer.start();
       await scheduler.start();
-      await import('./workflows/daily-tasks.js').then(m => m.setupDailyTasks());
+      await import('./workflows/daily-tasks.js').then((m) => m.setupDailyTasks());
       const gateway = new GatewayServer(config);
       await gateway.start();
     }
@@ -95,9 +95,11 @@ async function main(): Promise<void> {
 
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
-
   } catch (error) {
-    console.error('\nFailed to start Alpicia:', error instanceof Error ? error.message : String(error));
+    console.error(
+      '\nFailed to start Alpicia:',
+      error instanceof Error ? error.message : String(error)
+    );
     await disconnectDatabase();
     process.exit(1);
   }

@@ -1,9 +1,16 @@
+import typescriptEslint from '@typescript-eslint/parser';
+
 export default [
   {
     files: ['**/*.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      parser: typescriptEslint,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
       globals: {
         console: 'readonly',
         process: 'readonly',

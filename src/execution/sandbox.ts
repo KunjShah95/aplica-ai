@@ -198,22 +198,15 @@ export class SandboxExecutor {
       ...input,
     };
 
-    const contextKeys = Object.keys(context);
-    const contextValues = Object.values(context);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const contextEntries = contextKeys.map((key, index) => `${key} = args[${index}]`).join(', ');
+    // Use vm.runInNewContext which provides a sandboxed environment
+    // We wrap code in an IIFE to allow 'return' statements
+    const wrappedCode = `(function() {
+      'use strict';
+      ${code}
+    })()`;
 
-    const wrappedCode = `
-      (function(args) {
-        'use strict';
-        const { ${contextKeys.join(', ')} } = args;
-        ${code}
-      })
-    `;
-
-    // eslint-disable-next-line no-eval
-    const fn = eval(wrappedCode);
-    return fn(contextValues);
+    const vm = require('vm');
+    return vm.runInNewContext(wrappedCode, context);
   }
 
   async executeJavaScript(

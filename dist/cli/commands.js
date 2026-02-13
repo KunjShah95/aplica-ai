@@ -1,8 +1,9 @@
 import * as readline from 'readline';
+import { viralEngine } from '../viral/index.js';
 export async function handleChat(context) {
     const rl = readline.createInterface({
         input: process.stdin,
-        output: process.stdout
+        output: process.stdout,
     });
     const conversation = [];
     console.log('\nAlpicia Chat Mode');
@@ -54,12 +55,51 @@ export async function handleConfig(context) {
     console.log(`Memory Enabled: ${context.config.user.memoryEnabled}`);
     console.log('='.repeat(40) + '\n');
 }
+export async function handleViral(context) {
+    console.log('\n🚀 Alpicia Viral Features');
+    console.log('='.repeat(40));
+    const userId = context.config.user.id || 'cli-user';
+    const referralCode = await viralEngine.generateReferralCode(userId);
+    const stats = await viralEngine.getReferralStats(userId);
+    console.log(`\n📊 Your Viral Stats:`);
+    console.log(`   Rank: #${stats.rank}`);
+    console.log(`   Score: ${stats.score.toLocaleString()}`);
+    console.log(`   Total Referrals: ${stats.totalReferrals}`);
+    console.log(`   Total Shares: ${stats.totalShares}`);
+    console.log(`\n🔗 Your Referral Code: ${referralCode}`);
+    console.log(`\n📢 Share Alpicia:`);
+    console.log(`   Twitter: alpicia share twitter`);
+    console.log(`   GitHub:  alpicia share github`);
+    console.log(`   Discord: alpicia share discord`);
+    console.log(`   LinkedIn: alpicia share linkedin`);
+    console.log(`\n🏆 Community Leaderboard:`);
+    const leaderboard = await viralEngine.getLeaderboard(5);
+    leaderboard.forEach((entry) => {
+        console.log(`   ${entry.rank}. User ${entry.userId.substring(0, 8)}... - ${entry.score.toLocaleString()} pts`);
+    });
+    console.log('\n' + '='.repeat(40) + '\n');
+}
+export async function handleShare(context, platform) {
+    const userId = context.config.user.id || 'cli-user';
+    const referralCode = await viralEngine.generateReferralCode(userId);
+    const content = viralEngine.generateShareContent(platform, referralCode);
+    await viralEngine.recordShare(userId, platform);
+    console.log(`\n📢 Share on ${platform.charAt(0).toUpperCase() + platform.slice(1)}:`);
+    console.log('='.repeat(40));
+    console.log(content.message);
+    console.log('='.repeat(40));
+    console.log(`\n🔗 URL: ${content.url}`);
+    console.log(`\n✨ Copied to clipboard! (simulated)`);
+    console.log(`\n💡 Pro tip: Use "alpicia viral" to see your stats!\n`);
+}
 export async function handleHelp() {
     console.log('\nAvailable Commands');
     console.log('='.repeat(40));
     console.log('  chat     - Start interactive chat mode');
     console.log('  status   - Show system status');
     console.log('  config   - Show current configuration');
+    console.log('  viral    - Show viral stats and referral code');
+    console.log('  share <platform> - Share Alpicia on social media');
     console.log('  help     - Show this help message');
     console.log('  exit     - Exit the CLI');
     console.log('='.repeat(40) + '\n');

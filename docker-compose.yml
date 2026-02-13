@@ -76,7 +76,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - sentinelbot_network
+      - alpicia_network
 
 volumes:
   alpicia_data:

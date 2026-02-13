@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "env": {
+    "LLM_API_KEY": "@llm-api-key",
+    "LLM_PROVIDER": "claude",
+    "LLM_MODEL": "claude-sonnet-4-20250514"
+  }
+}
