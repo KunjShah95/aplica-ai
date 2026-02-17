@@ -6,6 +6,8 @@ export interface BrowserOptions {
   viewport?: { width: number; height: number };
   userAgent?: string;
   timeout?: number;
+  allowNoSandbox?: boolean;
+  allowedProtocols?: string[];
 }
 
 export interface BrowserResult {
@@ -39,12 +41,20 @@ export class BrowserExecutor {
   private isInitialized: boolean = false;
 
   constructor(options: BrowserOptions = {}) {
+    const envAllowedProtocols = process.env.BROWSER_ALLOWED_PROTOCOLS;
     this.options = {
       headless: options.headless ?? true,
       viewport: options.viewport ?? { width: 1280, height: 720 },
       userAgent:
         options.userAgent ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       timeout: options.timeout ?? 30000,
+      allowNoSandbox:
+        options.allowNoSandbox ?? (process.env.BROWSER_ALLOW_NO_SANDBOX === 'true'),
+      allowedProtocols:
+        options.allowedProtocols ??
+        (envAllowedProtocols
+          ? envAllowedProtocols.split(',').map((p) => p.trim()).filter(Boolean)
+          : ['http', 'https']),
     };
   }
 
@@ -52,9 +62,11 @@ export class BrowserExecutor {
     if (this.isInitialized) return;
 
     try {
+      const allowNoSandbox = this.options.allowNoSandbox ?? false;
+
       this.browser = await chromium.launch({
         headless: this.options.headless,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: allowNoSandbox ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
       });
 
       this.context = await this.browser.newContext({
@@ -77,6 +89,16 @@ export class BrowserExecutor {
 
     const id = randomUUID();
     try {
+      if (!this.isUrlAllowed(options.url)) {
+        return {
+          id,
+          success: false,
+          operation: 'navigate',
+          error: `Blocked URL protocol (allowed: ${(this.options.allowedProtocols || ['http', 'https']).join(', ')})`,
+          timestamp: new Date(),
+        };
+      }
+
       await this.page!.goto(options.url, {
         waitUntil: options.waitUntil ?? 'domcontentloaded',
         timeout: options.timeout ?? this.options.timeout,
@@ -447,6 +469,17 @@ export class BrowserExecutor {
   async getCurrentUrl(): Promise<string> {
     await this.ensureInitialized();
     return this.page!.url();
+  }
+
+  private isUrlAllowed(rawUrl: string): boolean {
+    try {
+      const parsed = new URL(rawUrl);
+      const protocol = parsed.protocol.replace(':', '').toLowerCase();
+      const allowed = this.options.allowedProtocols || ['http', 'https'];
+      return allowed.includes(protocol);
+    } catch {
+      return false;
+    }
   }
 }
 

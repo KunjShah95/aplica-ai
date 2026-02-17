@@ -6,13 +6,40 @@ import { shellExecutor } from './shell.js';
 import { fileSystemExecutor } from './filesystem.js';
 import { browserExecutor } from './browser.js';
 import { sandboxExecutor } from './sandbox.js';
+import { workspaceIsolation, } from '../core/security/workspace-isolation.js';
+let currentUserContext;
+export function setExecutionContext(context) {
+    currentUserContext = context;
+}
+export function getExecutionContext() {
+    return currentUserContext;
+}
 export const executionContext = {
     shell: shellExecutor,
     filesystem: fileSystemExecutor,
     browser: browserExecutor,
     sandbox: sandboxExecutor,
+    workspace: workspaceIsolation,
 };
-export async function executeCommand(type, operation, params) {
+export async function executeCommand(type, operation, params, options = {}) {
+    const userContext = options.userContext || currentUserContext;
+    if (userContext?.workspaceId && type === 'filesystem') {
+        const filePath = params.path;
+        const op = operation;
+        if (['readFile', 'writeFile', 'deleteFile', 'listDirectory', 'createDirectory'].includes(op)) {
+            const accessCheck = workspaceIsolation.checkAccess(userContext, filePath, op === 'readFile' ? 'read' : op === 'writeFile' ? 'write' : 'delete');
+            if (!accessCheck.allowed) {
+                return {
+                    success: false,
+                    path: filePath,
+                    operation: op,
+                    error: accessCheck.error || 'Access denied',
+                    timestamp: new Date(),
+                };
+            }
+            params.path = accessCheck.resolvedPath;
+        }
+    }
     switch (type) {
         case 'shell':
             return shellExecutor.execute({

@@ -1,6 +1,5 @@
 export type TriggerType = 'MANUAL' | 'CRON' | 'WEBHOOK' | 'EVENT';
 export type StepType = 'LLM_PROMPT' | 'HTTP_REQUEST' | 'CODE_EXECUTION' | 'TOOL_EXECUTION' | 'CONDITIONAL' | 'DELAY' | 'NOTIFICATION' | 'MEMORY_OPERATION';
-export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export interface WorkflowDefinition {
     name: string;
     description?: string;
@@ -27,6 +26,7 @@ export interface StepDefinition {
     };
 }
 export interface ExecutionContext {
+    conversationId?: string | null;
     workflowId: string;
     executionId: string;
     triggerId?: string;
@@ -54,9 +54,9 @@ export declare class WorkflowEngine {
             id: string;
         };
         steps: {
-            id: string;
-            status: import(".prisma/client").$Enums.ExecutionStatus;
             error: string | null;
+            status: import(".prisma/client").$Enums.ExecutionStatus;
+            id: string;
             inputs: import("@prisma/client/runtime/library").JsonValue;
             outputs: import("@prisma/client/runtime/library").JsonValue | null;
             startedAt: Date;
@@ -66,9 +66,9 @@ export declare class WorkflowEngine {
             executionId: string;
         }[];
     } & {
-        id: string;
-        status: import(".prisma/client").$Enums.ExecutionStatus;
         error: string | null;
+        status: import(".prisma/client").$Enums.ExecutionStatus;
+        id: string;
         workflowId: string;
         triggeredBy: string | null;
         inputs: import("@prisma/client/runtime/library").JsonValue;
@@ -81,9 +81,9 @@ export declare class WorkflowEngine {
             steps: number;
         };
     } & {
-        id: string;
-        status: import(".prisma/client").$Enums.ExecutionStatus;
         error: string | null;
+        status: import(".prisma/client").$Enums.ExecutionStatus;
+        id: string;
         workflowId: string;
         triggeredBy: string | null;
         inputs: import("@prisma/client/runtime/library").JsonValue;

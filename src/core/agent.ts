@@ -3,12 +3,15 @@ import { LLMProvider, LLMMessage } from './llm/index.js';
 import { conversationManager } from './conversation.js';
 import { taskQueue } from './queue.js';
 import { Message, Conversation, TaskType } from './types.js';
-import { executeCommand, executionContext } from '../execution/index.js';
+import { executeCommand, executionContext, setExecutionContext } from '../execution/index.js';
 import { promptGuard } from '../security/prompt-guard.js';
+import { promptManager, PromptVariable } from './prompt-manager.js';
 
 export interface AgentOptions {
   config: AppConfig;
   llm: LLMProvider;
+  workspaceId?: string;
+  userId?: string;
 }
 
 export interface AgentResponse {
@@ -28,18 +31,65 @@ export class Agent {
   private config: AppConfig;
   private llm: LLMProvider;
   private systemPrompt: string;
+  private workspaceId?: string;
+  private userId?: string;
 
   constructor(options: AgentOptions) {
     this.config = options.config;
     this.llm = options.llm;
+    this.workspaceId = options.workspaceId;
+    this.userId = options.userId;
     this.systemPrompt = this.buildSystemPrompt();
+
+    if (this.workspaceId && this.userId) {
+      this.setupWorkspaceContext();
+    }
+  }
+
+  private setupWorkspaceContext(): void {
+    if (this.workspaceId && this.userId) {
+      setExecutionContext({
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+        role: this.config.user.role || 'USER',
+      });
+    }
   }
 
   private buildSystemPrompt(): string {
     const soul = this.config.soul;
     const identity = this.config.identity;
 
-    return `# Identity
+    const variables: PromptVariable[] = [
+      { name: 'identity.displayName', value: identity.displayName },
+      { name: 'identity.bio', value: identity.bio },
+      { name: 'identity.tagline', value: identity.tagline },
+      { name: 'soul.personality.traits', value: soul.personality.traits.join(', ') },
+      { name: 'soul.personality.defaultTone', value: soul.personality.defaultTone },
+      {
+        name: 'soul.personality.values',
+        value: soul.personality.values.map((v) => `- ${v}`).join('\n'),
+      },
+      {
+        name: 'soul.personality.boundaries',
+        value: soul.personality.boundaries.map((b) => `- ${b}`).join('\n'),
+      },
+      { name: 'user.name', value: this.config.user.name },
+      { name: 'identity.timezone', value: identity.timezone },
+      { name: 'identity.availability.enabled', value: String(identity.availability.enabled) },
+      {
+        name: 'identity.availability.defaultHours',
+        value: identity.availability.defaultHours || '',
+      },
+    ];
+
+    try {
+      return promptManager.generatePrompt({
+        templateName: 'System Default',
+        variables,
+      });
+    } catch {
+      return `# Identity
 You are ${identity.displayName}, ${identity.bio}.
 
 ${identity.tagline}
@@ -73,6 +123,7 @@ You have access to execution capabilities that allow you to:
 ${identity.availability.enabled ? `- Availability: ${identity.availability.defaultHours}` : ''}
 
 You are helpful, precise, and proactive. You provide clear and concise responses while respecting user preferences and privacy.`;
+    }
   }
 
   async processMessage(
@@ -90,6 +141,7 @@ You are helpful, precise, and proactive. You provide clear and concise responses
       | 'matrix'
       | 'webchat'
       | 'slack'
+      | 'whatsapp'
   ): Promise<AgentResponse> {
     // 1. Security Check: Prompt Guard
     const securityCheck = promptGuard.validate(content);
@@ -173,7 +225,8 @@ You are helpful, precise, and proactive. You provide clear and concise responses
       | 'msteams'
       | 'matrix'
       | 'webchat'
-      | 'slack',
+      | 'slack'
+      | 'whatsapp',
     initialMessage?: string
   ): Promise<{ conversationId: string; response?: AgentResponse }> {
     const conversation = await conversationManager.create(userId, {

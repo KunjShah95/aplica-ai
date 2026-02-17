@@ -1,6 +1,6 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "name": "sentinelbot",
+  "name": "alpicia",
   "build": {
     "builder": "NIXPACKS"
   },

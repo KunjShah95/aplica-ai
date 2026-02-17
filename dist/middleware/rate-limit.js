@@ -12,6 +12,7 @@ export class RateLimiter {
             onLimitReached: config.onLimitReached || (() => { }),
         };
         this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+        this.cleanupInterval.unref();
     }
     check(key) {
         const now = Date.now();

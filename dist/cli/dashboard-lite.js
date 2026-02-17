@@ -278,7 +278,7 @@ class AdvancedDashboard {
 export const startDashboard = async () => {
     const dashboard = new AdvancedDashboard();
     // Simulate background traffic
-    setInterval(() => {
+    const trafficInterval = setInterval(() => {
         if (Math.random() > 0.7) {
             const sources = ['NETWORK', 'DB', 'SECURITY', 'SYSTEM'];
             const msgs = ['Heartbeat OK', 'Index optimized', 'Scan complete', 'GC running'];
@@ -286,6 +286,11 @@ export const startDashboard = async () => {
             dashboard.log(sources[r], msgs[r], 'INFO');
         }
     }, 2000);
-    await dashboard.start();
+    try {
+        await dashboard.start();
+    }
+    finally {
+        clearInterval(trafficInterval);
+    }
 };
 //# sourceMappingURL=dashboard-lite.js.map

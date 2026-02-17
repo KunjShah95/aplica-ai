@@ -225,8 +225,8 @@ export class WorkflowBuilder extends EventEmitter {
     }
     evaluateCondition(condition, context) {
         try {
-            const fn = new Function('context', `with(context) { return ${condition}; }`);
-            return Boolean(fn(context));
+            const vm = require('vm');
+            return Boolean(vm.runInNewContext(condition, context));
         }
         catch {
             return true;

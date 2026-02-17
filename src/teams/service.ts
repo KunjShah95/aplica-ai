@@ -1,63 +1,37 @@
-import {
-  Injectable,
-  UnauthorizedError,
-  NotFoundError,
-  ConflictError,
-} from "../core/errors";
-import { v4 as uuidv4 } from "crypto";
-import { db } from "../database";
-import {
-  Team,
-  User,
-  Invite,
-  ApiKey,
-  userRolePermissions,
-  AuthenticatedUser,
-  UserRole,
-} from "./types";
+import { Injectable, UnauthorizedError, NotFoundError, ConflictError } from '../core/errors';
+import { randomBytes } from 'crypto';
+import { db } from '../db/index.js';
+import { Team, TeamMember, TeamRole, User, ApiKey, AuditLog, Workspace } from '@prisma/client';
+import { AuthenticatedUser } from './types';
 
 @Injectable()
 export class TeamService {
-  async createTeam(
-    owner: AuthenticatedUser,
-    data: { name: string; slug?: string },
-  ): Promise<Team> {
+  async createTeam(owner: AuthenticatedUser, data: { name: string; slug?: string }): Promise<Team> {
     const slug =
       data.slug ??
       data.name
         .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "");
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
 
     const existing = await db.team.findUnique({ where: { slug } });
     if (existing) {
-      throw new ConflictError("Team slug already exists");
+      throw new ConflictError('Team slug already exists');
     }
 
     const team = await db.team.create({
       data: {
-        id: crypto.randomUUID(),
         name: data.name,
         slug,
         ownerId: owner.id,
-        plan: "free",
-        settings: {
-          defaultRole: "developer",
-          requireApproval: false,
-          maxWorkflows: 10,
-          allowApiAccess: true,
-          auditRetentionDays: 30,
-        },
       },
     });
 
     await db.teamMember.create({
       data: {
-        id: crypto.randomUUID(),
         teamId: team.id,
         userId: owner.id,
-        role: "owner",
-        createdAt: new Date(),
+        role: TeamRole.OWNER,
       },
     });
 
@@ -70,25 +44,42 @@ export class TeamService {
 
   async updateTeam(
     teamId: string,
-    data: Partial<Team>,
-    user: AuthenticatedUser,
+    data: Partial<Omit<Team, 'id' | 'createdAt'>>,
+    user: AuthenticatedUser
   ): Promise<Team> {
-    if (!hasPermission(user, "settings:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    if (!hasPermission(user, 'settings:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
     return db.team.update({
       where: { id: teamId },
       data: {
-        ...data,
+        name: data.name,
+        description: data.description,
+        avatar: data.avatar,
         updatedAt: new Date(),
       },
     });
   }
 
-  async listTeamMembers(
-    teamId: string,
-  ): Promise<(User & { role: UserRole })[]> {
+  async deleteTeam(teamId: string, user: AuthenticatedUser): Promise<void> {
+    if (!hasPermission(user, 'settings:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
+    }
+
+    await db.team.delete({ where: { id: teamId } });
+  }
+
+  async listUserTeams(userId: string): Promise<Team[]> {
+    const memberships = await db.teamMember.findMany({
+      where: { userId },
+      include: { team: true },
+    });
+
+    return memberships.map((m) => m.team);
+  }
+
+  async listTeamMembers(teamId: string): Promise<(User & { teamRole: TeamRole })[]> {
     const memberships = await db.teamMember.findMany({
       where: { teamId },
       include: { user: true },
@@ -96,42 +87,57 @@ export class TeamService {
 
     return memberships.map((m) => ({
       ...m.user,
-      role: m.role as UserRole,
+      teamRole: m.role,
     }));
   }
 
   async addTeamMember(
     teamId: string,
-    email: string,
-    role: UserRole,
-    invitedBy: AuthenticatedUser,
-  ): Promise<Invite> {
-    if (!hasPermission(invitedBy, "users:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    userId: string,
+    role: TeamRole,
+    invitedBy: AuthenticatedUser
+  ): Promise<TeamMember> {
+    if (!hasPermission(invitedBy, 'users:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
-    const invite = await db.invite.create({
+    const member = await db.teamMember.create({
       data: {
-        id: crypto.randomUUID(),
         teamId,
-        email,
+        userId,
         role,
-        token: crypto.randomUUID() + crypto.randomUUID(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdBy: invitedBy.id,
       },
     });
 
-    return invite;
+    return member;
+  }
+
+  async inviteMember(
+    teamId: string,
+    email: string,
+    role: TeamRole,
+    invitedBy: AuthenticatedUser
+  ): Promise<void> {
+    if (!hasPermission(invitedBy, 'users:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
+    }
+
+    // Find user by email
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    await this.addTeamMember(teamId, user.id, role, invitedBy);
   }
 
   async removeTeamMember(
     teamId: string,
     userId: string,
-    removedBy: AuthenticatedUser,
+    removedBy: AuthenticatedUser
   ): Promise<void> {
-    if (!hasPermission(removedBy, "users:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    if (!hasPermission(removedBy, 'users:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
     const membership = await db.teamMember.findFirst({
@@ -139,11 +145,11 @@ export class TeamService {
     });
 
     if (!membership) {
-      throw new NotFoundError("User is not a team member");
+      throw new NotFoundError('User is not a team member');
     }
 
-    if (membership.role === "owner") {
-      throw new ConflictError("Cannot remove team owner");
+    if (membership.role === TeamRole.OWNER) {
+      throw new ConflictError('Cannot remove team owner');
     }
 
     await db.teamMember.delete({ where: { id: membership.id } });
@@ -152,11 +158,11 @@ export class TeamService {
   async updateMemberRole(
     teamId: string,
     userId: string,
-    newRole: UserRole,
-    updatedBy: AuthenticatedUser,
+    newRole: TeamRole,
+    updatedBy: AuthenticatedUser
   ): Promise<void> {
-    if (!hasPermission(updatedBy, "users:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    if (!hasPermission(updatedBy, 'users:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
     const membership = await db.teamMember.findFirst({
@@ -164,11 +170,11 @@ export class TeamService {
     });
 
     if (!membership) {
-      throw new NotFoundError("User is not a team member");
+      throw new NotFoundError('User is not a team member');
     }
 
-    if (membership.role === "owner" && newRole !== "owner") {
-      throw new ConflictError("Cannot demote team owner");
+    if (membership.role === TeamRole.OWNER && newRole !== TeamRole.OWNER) {
+      throw new ConflictError('Cannot demote team owner');
     }
 
     await db.teamMember.update({
@@ -177,74 +183,87 @@ export class TeamService {
     });
   }
 
-  async acceptInvite(token: string, user: AuthenticatedUser): Promise<void> {
-    const invite = await db.invite.findUnique({
-      where: { token },
-    });
+  // Workspace methods
+  async listWorkspaces(teamId: string): Promise<Workspace[]> {
+    return db.workspace.findMany({ where: { teamId } });
+  }
 
-    if (!invite) {
-      throw new NotFoundError("Invite not found");
-    }
-
-    if (invite.expiresAt < new Date()) {
-      throw new ConflictError("Invite has expired");
-    }
-
-    await db.teamMember.create({
+  async createWorkspace(
+    teamId: string,
+    data: { name: string; description?: string }
+  ): Promise<Workspace> {
+    return db.workspace.create({
       data: {
-        id: crypto.randomUUID(),
-        teamId: invite.teamId,
-        userId: user.id,
-        role: invite.role,
-        createdAt: new Date(),
+        teamId,
+        name: data.name,
+        description: data.description,
       },
     });
+  }
 
-    await db.invite.delete({ where: { id: invite.id } });
+  async getWorkspace(workspaceId: string): Promise<Workspace | null> {
+    return db.workspace.findUnique({ where: { id: workspaceId } });
+  }
+
+  async updateWorkspace(
+    workspaceId: string,
+    data: { name?: string; description?: string | null }
+  ): Promise<Workspace> {
+    return db.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        name: data.name,
+        description: data.description,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    await db.workspace.delete({ where: { id: workspaceId } });
   }
 
   async createApiKey(
-    teamId: string,
+    userId: string,
     name: string,
-    permissions: string[],
-    user: AuthenticatedUser,
-  ): Promise<ApiKey> {
-    if (!hasPermission(user, "api:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    scopes: string[],
+    user: AuthenticatedUser
+  ): Promise<ApiKey & { key: string }> {
+    if (!hasPermission(user, 'api:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
     const prefix = `sb_${Date.now().toString(36)}`;
-    const key = `sk_${prefix}_${crypto.randomBytes(24).toString("hex")}`;
+    const key = `sk_${prefix}_${randomBytes(24).toString('hex')}`;
     const keyHash = await hashKey(key);
 
     const apiKey = await db.apiKey.create({
       data: {
-        id: crypto.randomUUID(),
-        teamId,
+        userId,
         name,
         keyHash,
-        prefix,
-        permissions,
-        expiresAt: null,
-        createdAt: new Date(),
+        keyPrefix: prefix,
+        scopes,
       },
     });
 
     return { ...apiKey, key };
   }
 
-  async listApiKeys(teamId: string): Promise<Omit<ApiKey, "keyHash">[]> {
+  async listApiKeys(userId: string): Promise<Omit<ApiKey, 'keyHash'>[]> {
     const keys = await db.apiKey.findMany({
-      where: { teamId },
+      where: { userId },
       select: {
         id: true,
-        teamId: true,
+        userId: true,
         name: true,
-        prefix: true,
-        permissions: true,
+        teamId: true,
+        keyPrefix: true,
+        scopes: true,
         lastUsedAt: true,
         expiresAt: true,
         createdAt: true,
+        revokedAt: true,
       },
     });
 
@@ -252,28 +271,29 @@ export class TeamService {
   }
 
   async revokeApiKey(keyId: string, user: AuthenticatedUser): Promise<void> {
-    if (!hasPermission(user, "api:write")) {
-      throw new UnauthorizedError("Insufficient permissions");
+    if (!hasPermission(user, 'api:write')) {
+      throw new UnauthorizedError('Insufficient permissions');
     }
 
     await db.apiKey.delete({ where: { id: keyId } });
   }
 
   async getAuditLogs(
-    teamId: string,
-    options: { userId?: string; action?: string; limit?: number },
-  ): Promise<any[]> {
+    userId: string,
+    options: { action?: string; limit?: number }
+  ): Promise<AuditLog[]> {
     return db.auditLog.findMany({
       where: {
-        teamId,
-        ...(options.userId && { userId: options.userId }),
+        userId,
         ...(options.action && { action: options.action }),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       take: options.limit ?? 100,
     });
   }
 }
+
+export const teamService = new TeamService();
 
 function hashKey(key: string): Promise<string> {
   return Promise.resolve(`hash_${key.substring(0, 16)}`);

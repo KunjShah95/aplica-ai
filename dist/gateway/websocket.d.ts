@@ -1,10 +1,12 @@
 import { WebSocket } from 'ws';
 import { Agent } from '../core/agent.js';
 import { MessageRouter } from './router.js';
+import { AuthUser } from '../auth/index.js';
 export interface WSClient {
     id: string;
     ws: WebSocket;
     userId: string;
+    role?: AuthUser['role'];
     connectedAt: Date;
     lastActivity: Date;
 }
@@ -25,8 +27,10 @@ export declare class WebSocketGateway {
     private router;
     private clients;
     private userSessions;
+    private rateLimiter;
     private port;
     private pingInterval;
+    private approvalHandlers?;
     constructor(agent: Agent, router: MessageRouter, options?: {
         port?: number;
     });
@@ -38,6 +42,8 @@ export declare class WebSocketGateway {
     private handleHistoryRequest;
     private handleStatusRequest;
     private handleDisconnect;
+    private registerApprovalListeners;
+    private broadcastToAdmins;
     private send;
     private sendError;
     private startPingInterval;

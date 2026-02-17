@@ -123,7 +123,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, title: await page.title(), url: page.url() };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async click(sessionId, selector, options) {
@@ -142,7 +142,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async doubleClick(sessionId, selector, options) {
@@ -164,7 +164,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async dragAndDrop(sessionId, sourceSelector, targetSelector, options) {
@@ -179,7 +179,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async type(sessionId, selector, text, options) {
@@ -195,7 +195,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async fill(sessionId, selector, value, options) {
@@ -210,7 +210,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async press(sessionId, selector, key, options) {
@@ -226,7 +226,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async clear(sessionId, selector, options) {
@@ -241,7 +241,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async uploadFile(sessionId, selector, filePath) {
@@ -255,7 +255,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async submitForm(sessionId, formSelector) {
@@ -268,7 +268,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async fillForm(sessionId, formData) {
@@ -337,7 +337,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, text: text || '' };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async getAttribute(sessionId, selector, attribute, options) {
@@ -351,7 +351,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, value: value || undefined };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async getProperty(sessionId, selector, property, options) {
@@ -367,7 +367,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, value };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async countElements(sessionId, selector) {
@@ -379,7 +379,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, count };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async exists(sessionId, selector) {
@@ -391,7 +391,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, exists: count > 0 };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async isVisible(sessionId, selector) {
@@ -407,7 +407,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, visible };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async waitForSelector(sessionId, selector, options) {
@@ -422,7 +422,7 @@ export class EnhancedBrowserAutomation {
             return { success: true };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async waitForTimeout(sessionId, milliseconds) {
@@ -443,7 +443,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, url: response?.url() };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async waitForResponse(sessionId, urlPattern, options) {
@@ -457,7 +457,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, response: await response.json().catch(() => response.text()) };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async screenshot(sessionId, options) {
@@ -479,7 +479,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, data: buffer.toString('base64') };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async pdf(sessionId, options) {
@@ -501,7 +501,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, data: buffer.toString('base64') };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async evaluate(sessionId, script) {
@@ -514,7 +514,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, result };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async evaluateAsync(sessionId, script, timeout) {
@@ -531,7 +531,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, result };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async setViewport(sessionId, viewport) {
@@ -772,7 +772,7 @@ export class EnhancedBrowserAutomation {
             return { success: true, data };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
     async getAccessibilityTree(sessionId) {

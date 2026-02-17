@@ -7,12 +7,32 @@ import { shellExecutor } from './shell.js';
 import { fileSystemExecutor } from './filesystem.js';
 import { browserExecutor } from './browser.js';
 import { sandboxExecutor } from './sandbox.js';
+import {
+  workspaceIsolation,
+  WorkspaceIsolation,
+  type UserContext,
+} from '../core/security/workspace-isolation.js';
 
 export interface ExecutionContext {
   shell: typeof shellExecutor;
   filesystem: typeof fileSystemExecutor;
   browser: typeof browserExecutor;
   sandbox: typeof sandboxExecutor;
+  workspace: WorkspaceIsolation;
+}
+
+export interface ExecuteOptions {
+  userContext?: UserContext;
+}
+
+let currentUserContext: UserContext | undefined;
+
+export function setExecutionContext(context: UserContext | undefined): void {
+  currentUserContext = context;
+}
+
+export function getExecutionContext(): UserContext | undefined {
+  return currentUserContext;
 }
 
 export const executionContext: ExecutionContext = {
@@ -20,6 +40,7 @@ export const executionContext: ExecutionContext = {
   filesystem: fileSystemExecutor,
   browser: browserExecutor,
   sandbox: sandboxExecutor,
+  workspace: workspaceIsolation,
 };
 
 export type ExecutionResult =
@@ -31,8 +52,41 @@ export type ExecutionResult =
 export async function executeCommand(
   type: 'shell' | 'filesystem' | 'browser' | 'sandbox',
   operation: string,
-  params: Record<string, unknown>
+  params: Record<string, unknown>,
+  options: ExecuteOptions = {}
 ): Promise<ExecutionResult> {
+  const userContext = options.userContext || currentUserContext;
+
+  if (userContext?.workspaceId && type === 'filesystem') {
+    const filePath = params.path as string;
+    const op = operation as
+      | 'readFile'
+      | 'writeFile'
+      | 'deleteFile'
+      | 'listDirectory'
+      | 'createDirectory';
+
+    if (['readFile', 'writeFile', 'deleteFile', 'listDirectory', 'createDirectory'].includes(op)) {
+      const accessCheck = workspaceIsolation.checkAccess(
+        userContext,
+        filePath,
+        op === 'readFile' ? 'read' : op === 'writeFile' ? 'write' : 'delete'
+      );
+
+      if (!accessCheck.allowed) {
+        return {
+          success: false,
+          path: filePath,
+          operation: op,
+          error: accessCheck.error || 'Access denied',
+          timestamp: new Date(),
+        };
+      }
+
+      params.path = accessCheck.resolvedPath;
+    }
+  }
+
   switch (type) {
     case 'shell':
       return shellExecutor.execute({

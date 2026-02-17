@@ -17,9 +17,44 @@ export class NotionTool {
                 page_size: options?.pageSize || 100,
                 start_cursor: options?.startCursor,
             }));
+            const results = response.results.map((item) => {
+                if (item.object === 'page') {
+                    return {
+                        id: item.id,
+                        url: item.url,
+                        title: item.title?.[0]?.plain_text || '',
+                        icon: item.icon?.emoji ||
+                            item.icon?.external?.url ||
+                            item.icon?.file?.url,
+                        cover: item.cover?.external?.url || item.cover?.file?.url,
+                        createdTime: item.created_time,
+                        lastEditedTime: item.last_edited_time,
+                        createdBy: item.created_by?.id || '',
+                        lastEditedBy: item.last_edited_by?.id || '',
+                        parent: {
+                            type: item.parent?.type || 'unknown',
+                            id: item.parent?.page_id || item.parent?.database_id || '',
+                        },
+                        archived: item.archived,
+                    };
+                }
+                else {
+                    return {
+                        id: item.id,
+                        url: item.url,
+                        title: item.title?.[0]?.plain_text || '',
+                        description: item.description?.[0]?.plain_text,
+                        icon: item.icon?.emoji || undefined,
+                        cover: item.cover?.external?.url || item.cover?.file?.url,
+                        properties: item.properties || {},
+                        createdTime: item.created_time,
+                        lastEditedTime: item.last_edited_time,
+                    };
+                }
+            });
             return {
                 object: 'list',
-                results: response.results,
+                results,
                 hasMore: response.has_more,
                 nextCursor: response.next_cursor || undefined,
             };
@@ -31,12 +66,14 @@ export class NotionTool {
     }
     async getPage(pageId) {
         try {
-            const page = (await this.client.pages.retrieve({ page_id: pageId }));
+            const page = (await this.client.pages.retrieve({
+                page_id: pageId,
+            }));
             return {
                 id: page.id,
                 url: `https://notion.so/${pageId.replace(/-/g, '')}`,
                 title: this.extractTitle(page),
-                icon: page.icon?.emoji || page.external?.url || page.file?.url,
+                icon: page.icon?.emoji || page.icon?.external?.url || page.icon?.file?.url,
                 cover: page.cover?.external?.url || page.cover?.file?.url,
                 createdTime: page.created_time || '',
                 lastEditedTime: page.last_edited_time || '',
@@ -44,7 +81,7 @@ export class NotionTool {
                 lastEditedBy: page.last_edited_by?.id || '',
                 parent: {
                     type: page.parent?.type || 'unknown',
-                    id: page.parent?.id || '',
+                    id: page.parent?.page_id || page.parent?.database_id || '',
                 },
                 archived: page.archived || false,
             };
@@ -59,13 +96,13 @@ export class NotionTool {
             const parent = options.parent.pageId
                 ? { page_id: options.parent.pageId }
                 : { database_id: options.parent.databaseId };
-            const page = await this.client.pages.create({
+            const page = (await this.client.pages.create({
                 ...parent,
                 icon: options.icon ? { emoji: options.icon } : undefined,
                 cover: options.cover ? { external: { url: options.cover } } : undefined,
                 properties: this.buildProperties(options.title, options.properties),
                 children: options.children,
-            });
+            }));
             const createdPage = page;
             return {
                 id: createdPage.id,

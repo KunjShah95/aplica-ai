@@ -14,35 +14,43 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
-  passwordHash  String?
-  displayName   String?
-  avatar        String?
-  bio           String?
-  timezone      String    @default("UTC")
-  role          Role      @default(USER)
-  status        UserStatus @default(ACTIVE)
-  
+  id           String     @id @default(cuid())
+  email        String     @unique
+  username     String     @unique
+  passwordHash String?
+  displayName  String?
+  avatar       String?
+  bio          String?
+  timezone     String     @default("UTC")
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+
   emailVerified Boolean   @default(false)
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Two-Factor Authentication
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String?
+
   // Relations
-  sessions      Session[]
-  apiKeys       ApiKey[]
-  conversations Conversation[]
-  memories      Memory[]
-  workflows     Workflow[]
-  auditLogs     AuditLog[]
-  teamMembers   TeamMember[]
-  ownedTeams    Team[]        @relation("TeamOwner")
-  preferences   UserPreference[]
-  oauthAccounts OAuthAccount[]
-  notifications Notification[]
-  
+  sessions           Session[]
+  apiKeys            ApiKey[]
+  conversations      Conversation[]
+  memories           Memory[]
+  workflows          Workflow[]
+  auditLogs          AuditLog[]
+  teamMembers        TeamMember[]
+  ownedTeams         Team[]               @relation("TeamOwner")
+  preferences        UserPreference[]
+  oauthAccounts      OAuthAccount[]
+  notifications      Notification[]
+  GroupMember        GroupMember[]
+  PluginInstallation PluginInstallation[]
+  PluginReview       PluginReview[]
+
   @@index([email])
   @@index([username])
 }
@@ -68,33 +76,36 @@ model Session {
   ipAddress    String?
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([token])
 }
 
 model ApiKey {
-  id          String      @id @default(cuid())
-  userId      String
-  name        String
-  keyHash     String      @unique
-  keyPrefix   String
-  scopes      String[]
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime    @default(now())
-  
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id         String    @id @default(cuid())
+  userId     String?
+  teamId     String?
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  scopes     String[]
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
   @@index([userId])
+  @@index([teamId])
   @@index([keyHash])
 }
 
 model OAuthAccount {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
   provider          String
   providerAccountId String
@@ -103,11 +114,11 @@ model OAuthAccount {
   tokenType         String?
   scope             String?
   expiresAt         DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
@@ -118,9 +129,9 @@ model UserPreference {
   preferences Json     @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -129,32 +140,36 @@ model UserPreference {
 // ============================================
 
 model Team {
-  id          String       @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String       @unique
+  slug        String   @unique
   description String?
   avatar      String?
   ownerId     String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
-  owner       User         @relation("TeamOwner", fields: [ownerId], references: [id])
-  members     TeamMember[]
-  workspaces  Workspace[]
-  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner              User                 @relation("TeamOwner", fields: [ownerId], references: [id])
+  members            TeamMember[]
+  workspaces         Workspace[]
+  ApiKey             ApiKey[]
+  Invite             Invite[]
+  AuditLog           AuditLog[]
+  PluginInstallation PluginInstallation[]
+
   @@index([ownerId])
 }
 
 model TeamMember {
-  id        String     @id @default(cuid())
-  teamId    String
-  userId    String
-  role      TeamRole   @default(MEMBER)
-  joinedAt  DateTime   @default(now())
-  
-  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
@@ -165,66 +180,134 @@ enum TeamRole {
   ADMIN
   MEMBER
   VIEWER
+  DEVELOPER
+}
+
+model Invite {
+  id        String   @id @default(cuid())
+  teamId    String
+  email     String
+  role      TeamRole @default(MEMBER)
+  token     String   @unique
+  expiresAt DateTime
+  createdBy String
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([token])
 }
 
 model Workspace {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   teamId      String
   name        String
   description String?
-  settings    Json          @default("{}")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  team        Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  conversations Conversation[]
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team           Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  conversations  Conversation[]
   knowledgeBases KnowledgeBase[]
-  
+
   @@index([teamId])
+}
+
+// ============================================
+// ENTERPRISE
+// ============================================
+
+model EnterpriseConfig {
+  id           String   @id @default(cuid())
+  name         String
+  domain       String   @unique
+  settings     Json     @default("{}")
+  samlConfig   Json?
+  oidcConfig   Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  groups Group[]
+
+  @@index([domain])
+}
+
+model Group {
+  id           String   @id @default(cuid())
+  enterpriseId String
+  name         String
+  description  String?
+  settings     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  enterprise EnterpriseConfig @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  members    GroupMember[]
+
+  @@index([enterpriseId])
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
 }
 
 // ============================================
 // CONVERSATIONS & MESSAGES
 // ============================================
+// CONVERSATIONS & MESSAGES
+// ============================================
 
 model Conversation {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   workspaceId String?
   title       String?
   summary     String?
-  platform    String    @default("api")
-  metadata    Json      @default("{}")
-  isArchived  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  platform    String   @default("api")
+  metadata    Json     @default("{}")
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace?          @relation(fields: [workspaceId], references: [id])
   messages    Message[]
   sharedLinks ConversationShare[]
-  
+
   @@index([userId])
   @@index([workspaceId])
   @@index([createdAt])
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String      @id @default(cuid())
   conversationId String
   role           MessageRole
   content        String
-  metadata       Json         @default("{}")
+  metadata       Json        @default("{}")
   tokenCount     Int?
   model          String?
   toolCalls      Json?
   parentId       String?
-  createdAt      DateTime     @default(now())
-  
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  parent         Message?     @relation("MessageThread", fields: [parentId], references: [id])
-  replies        Message[]    @relation("MessageThread")
-  
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  parent       Message?     @relation("MessageThread", fields: [parentId], references: [id])
+  replies      Message[]    @relation("MessageThread")
+
   @@index([conversationId])
   @@index([createdAt])
 }
@@ -237,15 +320,15 @@ enum MessageRole {
 }
 
 model ConversationShare {
-  id             String       @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
-  shareToken     String       @unique
+  shareToken     String    @unique
   expiresAt      DateTime?
-  accessCount    Int          @default(0)
-  createdAt      DateTime     @default(now())
-  
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
+  accessCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
   @@index([shareToken])
 }
 
@@ -254,22 +337,22 @@ model ConversationShare {
 // ============================================
 
 model Memory {
-  id        String                 @id @default(cuid())
-  userId    String
-  type      MemoryType
-  content   String
-  metadata  Json                   @default("{}")
-  embedding Unsupported("vector(1536)")?
-  tags      String[]
-  importance Float                 @default(0.5)
-  accessCount Int                  @default(0)
+  id             String                       @id @default(cuid())
+  userId         String
+  type           MemoryType
+  content        String
+  metadata       Json                         @default("{}")
+  embedding      Unsupported("vector(1536)")?
+  tags           String[]
+  importance     Float                        @default(0.5)
+  accessCount    Int                          @default(0)
   lastAccessedAt DateTime?
-  expiresAt DateTime?
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
-  
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  expiresAt      DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([type])
   @@index([tags])
@@ -286,36 +369,36 @@ enum MemoryType {
 }
 
 model KnowledgeBase {
-  id          String            @id @default(cuid())
+  id          String   @id @default(cuid())
   workspaceId String
   name        String
   description String?
-  settings    Json              @default("{}")
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
-  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  documents   KnowledgeDocument[]
-  
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents KnowledgeDocument[]
+
   @@index([workspaceId])
 }
 
 model KnowledgeDocument {
-  id              String        @id @default(cuid())
+  id              String             @id @default(cuid())
   knowledgeBaseId String
   title           String
   source          String?
   sourceType      DocumentSourceType
   content         String
-  metadata        Json          @default("{}")
-  status          DocumentStatus @default(PENDING)
+  metadata        Json               @default("{}")
+  status          DocumentStatus     @default(PENDING)
   errorMessage    String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
-  chunks          DocumentChunk[]
-  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  knowledgeBase KnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  chunks        DocumentChunk[]
+
   @@index([knowledgeBaseId])
   @@index([status])
 }
@@ -335,16 +418,16 @@ enum DocumentStatus {
 }
 
 model DocumentChunk {
-  id         String                 @id @default(cuid())
+  id         String                       @id @default(cuid())
   documentId String
   index      Int
   content    String
   embedding  Unsupported("vector(1536)")?
-  metadata   Json                   @default("{}")
-  createdAt  DateTime               @default(now())
-  
-  document   KnowledgeDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  
+  metadata   Json                         @default("{}")
+  createdAt  DateTime                     @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
   @@index([documentId])
 }
 
@@ -353,49 +436,49 @@ model DocumentChunk {
 // ============================================
 
 model AgentPersona {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
   systemPrompt String
-  settings    Json     @default("{}")
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  settings     Json     @default("{}")
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   @@index([isDefault])
 }
 
 model Tool {
-  id          String     @id @default(cuid())
-  name        String     @unique
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String
   schema      Json
   handler     String
   category    String?
-  isBuiltin   Boolean    @default(false)
-  isEnabled   Boolean    @default(true)
+  isBuiltin   Boolean  @default(false)
+  isEnabled   Boolean  @default(true)
   permissions String[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  executions  ToolExecution[]
-  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  executions ToolExecution[]
+
   @@index([name])
   @@index([category])
 }
 
 model ToolExecution {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   toolId    String
   input     Json
   output    Json?
   status    ExecutionStatus @default(PENDING)
   error     String?
   duration  Int?
-  createdAt DateTime @default(now())
-  
-  tool      Tool     @relation(fields: [toolId], references: [id])
-  
+  createdAt DateTime        @default(now())
+
+  tool Tool @relation(fields: [toolId], references: [id])
+
   @@index([toolId])
   @@index([status])
   @@index([createdAt])
@@ -407,6 +490,7 @@ enum ExecutionStatus {
   COMPLETED
   FAILED
   CANCELLED
+  PENDING_APPROVAL
 }
 
 // ============================================
@@ -414,35 +498,35 @@ enum ExecutionStatus {
 // ============================================
 
 model Workflow {
-  id          String            @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   name        String
   description String?
   nodes       Json
   edges       Json
-  settings    Json              @default("{}")
-  isActive    Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  executions  WorkflowExecution[]
-  triggers    WorkflowTrigger[]
-  
+  settings    Json     @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions WorkflowExecution[]
+  triggers   WorkflowTrigger[]
+
   @@index([userId])
   @@index([isActive])
 }
 
 model WorkflowTrigger {
-  id         String       @id @default(cuid())
+  id         String      @id @default(cuid())
   workflowId String
   type       TriggerType
   config     Json
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  
-  workflow   Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
   @@index([workflowId])
   @@index([type])
 }
@@ -455,38 +539,38 @@ enum TriggerType {
 }
 
 model WorkflowExecution {
-  id         String          @id @default(cuid())
-  workflowId String
+  id          String          @id @default(cuid())
+  workflowId  String
   triggeredBy String?
-  inputs     Json            @default("{}")
-  outputs    Json?
-  status     ExecutionStatus @default(PENDING)
-  error      String?
-  startedAt  DateTime        @default(now())
+  inputs      Json            @default("{}")
+  outputs     Json?
+  status      ExecutionStatus @default(PENDING)
+  error       String?
+  startedAt   DateTime        @default(now())
   completedAt DateTime?
-  
-  workflow   Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  steps      WorkflowStep[]
-  
+
+  workflow Workflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps    WorkflowStep[]
+
   @@index([workflowId])
   @@index([status])
   @@index([startedAt])
 }
 
 model WorkflowStep {
-  id          String            @id @default(cuid())
+  id          String          @id @default(cuid())
   executionId String
   nodeId      String
   nodeName    String?
-  inputs      Json              @default("{}")
+  inputs      Json            @default("{}")
   outputs     Json?
-  status      ExecutionStatus   @default(PENDING)
+  status      ExecutionStatus @default(PENDING)
   error       String?
-  startedAt   DateTime          @default(now())
+  startedAt   DateTime        @default(now())
   completedAt DateTime?
-  
-  execution   WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
   @@index([executionId])
   @@index([nodeId])
 }
@@ -496,25 +580,25 @@ model WorkflowStep {
 // ============================================
 
 model ScheduledTask {
-  id          String       @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   type        TaskType
   schedule    Json
-  payload     Json         @default("{}")
+  payload     Json      @default("{}")
   workflowId  String?
-  isActive    Boolean      @default(true)
-  isEnabled   Boolean      @default(true)
-  runCount    Int          @default(0)
-  failCount   Int          @default(0)
-  maxRetries  Int          @default(3)
+  isActive    Boolean   @default(true)
+  isEnabled   Boolean   @default(true)
+  runCount    Int       @default(0)
+  failCount   Int       @default(0)
+  maxRetries  Int       @default(3)
   lastRunAt   DateTime?
   nextRunAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
-  runs        TaskRun[]
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  runs TaskRun[]
+
   @@index([isActive])
   @@index([isEnabled])
   @@index([nextRunAt])
@@ -528,17 +612,17 @@ enum TaskType {
 }
 
 model TaskRun {
-  id        String       @id @default(cuid())
-  taskId    String
-  status    ExecutionStatus @default(PENDING)
-  output    Json?
-  error     String?
-  duration  Int?
-  startedAt DateTime     @default(now())
+  id          String          @id @default(cuid())
+  taskId      String
+  status      ExecutionStatus @default(PENDING)
+  output      Json?
+  error       String?
+  duration    Int?
+  startedAt   DateTime        @default(now())
   completedAt DateTime?
-  
-  task      ScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  
+
+  task ScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
   @@index([taskId])
   @@index([startedAt])
 }
@@ -548,37 +632,37 @@ model TaskRun {
 // ============================================
 
 model Integration {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   type        String
   config      Json
   credentials Json?
-  isActive    Boolean  @default(true)
+  isActive    Boolean   @default(true)
   lastSyncAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  webhooks    Webhook[]
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  webhooks Webhook[]
+
   @@index([type])
   @@index([isActive])
 }
 
 model Webhook {
-  id            String      @id @default(cuid())
-  integrationId String?
-  name          String
-  url           String
-  secret        String?
-  events        String[]
-  isActive      Boolean     @default(true)
+  id              String    @id @default(cuid())
+  integrationId   String?
+  name            String
+  url             String
+  secret          String?
+  events          String[]
+  isActive        Boolean   @default(true)
   lastTriggeredAt DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  
-  integration   Integration? @relation(fields: [integrationId], references: [id])
-  deliveries    WebhookDelivery[]
-  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  integration Integration?      @relation(fields: [integrationId], references: [id])
+  deliveries  WebhookDelivery[]
+
   @@index([integrationId])
   @@index([isActive])
 }
@@ -593,9 +677,9 @@ model WebhookDelivery {
   success    Boolean  @default(false)
   error      String?
   createdAt  DateTime @default(now())
-  
-  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
   @@index([webhookId])
   @@index([createdAt])
 }
@@ -605,39 +689,87 @@ model WebhookDelivery {
 // ============================================
 
 model UsageRecord {
-  id           String   @id @default(cuid())
-  userId       String?
-  apiKeyId     String?
-  endpoint     String
-  method       String
-  statusCode   Int
-  tokenCount   Int?
-  cost         Float?
-  duration     Int
-  metadata     Json     @default("{}")
-  createdAt    DateTime @default(now())
-  
+  id         String   @id @default(cuid())
+  userId     String?
+  apiKeyId   String?
+  endpoint   String
+  method     String
+  statusCode Int
+  tokenCount Int?
+  cost       Float?
+  duration   Int
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
   @@index([userId])
   @@index([apiKeyId])
   @@index([createdAt])
   @@index([endpoint])
 }
 
-model AuditLog {
+// ============================================
+// AI / FINETUNING
+// ============================================
+
+model ModelVersion {
   id          String   @id @default(cuid())
-  userId      String?
-  action      String
-  resource    String
-  resourceId  String?
-  details     Json     @default("{}")
-  ipAddress   String?
-  userAgent   String?
-  status      String   @default("success")
+  name        String
+  version     String
+  modelId     String
+  baseModel   String?
+  status      String   @default("pending")
+  progress    Int      @default(0)
+  isActive    Boolean  @default(false)
+  config      Json     @default("{}")
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
   
-  user        User?    @relation(fields: [userId], references: [id])
+  trainingData TrainingData[]
   
+  @@index([modelId])
+}
+
+model TrainingData {
+  id                String   @id @default(cuid())
+  userId            String?
+  name              String?
+  modelVersionId    String
+  data              Json
+  status            String   @default("pending")
+  progress          Int      @default(0)
+  error             String?
+  errorMessage      String?
+  trainingExamples  Int      @default(0)
+  hyperparameters   Json     @default("{}")
+  createdAt         DateTime @default(now())
+  processedAt       DateTime?
+  completedAt       DateTime?
+  
+  modelVersion      ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+  
+  @@index([modelVersionId])
   @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  teamId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    Json     @default("{}")
+  ipAddress  String?
+  userAgent  String?
+  status     String   @default("success")
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
   @@index([action])
   @@index([resource])
   @@index([createdAt])
@@ -657,9 +789,9 @@ model Notification {
   isRead    Boolean          @default(false)
   readAt    DateTime?
   createdAt DateTime         @default(now())
-  
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
@@ -681,20 +813,65 @@ enum NotificationType {
 // ============================================
 
 model Plugin {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   version     String
   description String?
   author      String?
   homepage    String?
   manifest    Json
-  isInstalled Boolean  @default(false)
-  isEnabled   Boolean  @default(false)
-  settings    Json     @default("{}")
+  repository  String?
+  keywords    String[]
+  status      String    @default("PENDING")
+  downloads   Int       @default(0)
+  stars       Int       @default(0)
+  isInstalled Boolean   @default(false)
+  isEnabled   Boolean   @default(false)
+  settings    Json      @default("{}")
   installedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  installations PluginInstallation[]
+  reviews       PluginReview[]
+
   @@index([name])
   @@index([isInstalled])
 }
+
+model PluginInstallation {
+  id          String   @id @default(cuid())
+  pluginId    String
+  userId      String
+  teamId      String?
+  version     String
+  settings    Json     @default("{}")
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team?  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, userId, teamId])
+  @@index([pluginId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+model PluginReview {
+  id        String   @id @default(cuid())
+  pluginId  String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pluginId])
+  @@index([userId])
+}
+

@@ -6,6 +6,8 @@ export interface BrowserOptions {
     };
     userAgent?: string;
     timeout?: number;
+    allowNoSandbox?: boolean;
+    allowedProtocols?: string[];
 }
 export interface BrowserResult {
     id: string;
@@ -71,6 +73,7 @@ export declare class BrowserExecutor {
     private ensureInitialized;
     isReady(): boolean;
     getCurrentUrl(): Promise<string>;
+    private isUrlAllowed;
 }
 export declare const browserExecutor: BrowserExecutor;
 //# sourceMappingURL=browser.d.ts.map

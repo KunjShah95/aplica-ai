@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { notificationService } from '../notifications/service.js';
 import { toolRegistry } from '../agents/index.js';
+import { memoryManager } from '../memory/index.js';
 import { configLoader } from '../config/loader.js';
 import { createProvider } from '../core/llm/index.js';
 export class WorkflowEngine {
@@ -65,12 +66,70 @@ export class WorkflowEngine {
             const operation = step.config.operation;
             const data = this.interpolateObject(step.config.data, context);
             switch (operation) {
-                case 'store':
-                    return { stored: true, data };
-                case 'retrieve':
-                    return { retrieved: true };
-                case 'search':
-                    return { results: [] };
+                case 'store': {
+                    if (data.conversationId && Array.isArray(data.messages)) {
+                        await memoryManager.saveConversation(String(data.conversationId), String(data.userId || context.variables.userId || 'default'), data.messages);
+                        return { stored: true, type: 'conversation' };
+                    }
+                    if (data.title || data.content) {
+                        const note = await memoryManager.saveNote({
+                            title: String(data.title || 'Untitled'),
+                            content: String(data.content || ''),
+                            tags: data.tags || [],
+                            category: data.category || 'user',
+                        });
+                        return { stored: true, type: 'note', note };
+                    }
+                    if (data.logEntry) {
+                        const entry = data.logEntry;
+                        const log = await memoryManager.addDailyLog({
+                            type: entry.type || 'note',
+                            content: String(entry.content || ''),
+                            tags: entry.tags || [],
+                        });
+                        return { stored: true, type: 'daily_log', log };
+                    }
+                    throw new Error('Unsupported store payload for MEMORY_OPERATION');
+                }
+                case 'retrieve': {
+                    if (data.noteFileName) {
+                        const note = await memoryManager.getNote(String(data.noteFileName));
+                        return { retrieved: Boolean(note), note };
+                    }
+                    const userId = String(data.userId || context.variables.userId || 'default');
+                    const conversationId = String(data.conversationId || context.conversationId);
+                    const maxTokens = Number(data.maxTokens || 2000);
+                    const contextText = await memoryManager.getContext(userId, conversationId, maxTokens);
+                    return { retrieved: true, context: contextText };
+                }
+                case 'search': {
+                    if (!data.query)
+                        throw new Error('query is required for memory search');
+                    const results = await memoryManager.search({
+                        query: String(data.query),
+                        store: data.store,
+                        limit: data.limit,
+                        type: data.type,
+                        tags: data.tags,
+                        userId: data.userId,
+                    });
+                    return { results };
+                }
+                case 'remember': {
+                    if (!data.query)
+                        throw new Error('query is required for memory recall');
+                    const memories = await memoryManager.remember(String(data.query), {
+                        type: data.type,
+                        maxResults: data.maxResults,
+                    });
+                    return { memories };
+                }
+                case 'forget': {
+                    if (!data.id)
+                        throw new Error('id is required to forget memory');
+                    const deleted = await memoryManager.forget(String(data.id), data.store);
+                    return { deleted };
+                }
                 default:
                     throw new Error(`Unknown memory operation: ${operation}`);
             }
@@ -167,7 +226,22 @@ export class WorkflowEngine {
             },
             stepResults: {},
         };
-        this.runExecution(workflow, execution.id, context).catch(console.error);
+        this.runExecution(workflow, execution.id, context).catch(async (err) => {
+            console.error('Critical workflow execution failure:', err);
+            try {
+                await db.workflowExecution.update({
+                    where: { id: execution.id },
+                    data: {
+                        status: 'FAILED',
+                        completedAt: new Date(),
+                        error: err instanceof Error ? err.message : String(err),
+                    },
+                });
+            }
+            catch (dbErr) {
+                console.error('Failed to update execution status after crash:', dbErr);
+            }
+        });
         return execution.id;
     }
     async runExecution(workflow, executionId, context) {
@@ -288,8 +362,10 @@ export class WorkflowEngine {
     evaluateCondition(condition, context) {
         const interpolated = this.interpolate(condition, context);
         try {
-            const fn = new Function('ctx', `return ${interpolated}`);
-            return Boolean(fn(context));
+            const vm = require('vm');
+            // Use runInNewContext to prevent access to the main process
+            // We pass the context as the sandbox
+            return Boolean(vm.runInNewContext(interpolated, context));
         }
         catch {
             return false;

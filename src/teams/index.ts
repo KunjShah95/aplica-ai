@@ -1,1 +1,1 @@
-export { teamService, TeamService } from './service.js';
+export { teamService, TeamService } from './service';

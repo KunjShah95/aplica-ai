@@ -3,6 +3,7 @@ import { workflowEngine } from './engine.js';
 export class Scheduler {
     timers = new Map();
     running = false;
+    pollTimeout;
     async start() {
         if (this.running)
             return;
@@ -15,6 +16,10 @@ export class Scheduler {
         this.running = false;
         for (const timer of this.timers.values()) {
             clearTimeout(timer);
+        }
+        if (this.pollTimeout) {
+            clearTimeout(this.pollTimeout);
+            this.pollTimeout = undefined;
         }
         this.timers.clear();
         console.log('Scheduler stopped');
@@ -109,7 +114,7 @@ export class Scheduler {
                 console.error('Scheduler polling error:', error);
             }
             if (this.running) {
-                setTimeout(poll, 10000);
+                this.pollTimeout = setTimeout(poll, 10000);
             }
         };
         poll();

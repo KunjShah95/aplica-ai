@@ -64,11 +64,12 @@ export declare class AnalyticsService {
             id: string;
         } | null;
     } & {
+        status: string;
         id: string;
         userId: string | null;
-        status: string;
         createdAt: Date;
         details: Prisma.JsonValue;
+        teamId: string | null;
         ipAddress: string | null;
         action: string;
         resource: string;

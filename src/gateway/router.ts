@@ -1,5 +1,7 @@
 import { Agent } from '../core/agent.js';
 import { randomUUID } from 'crypto';
+import { promptGuard } from '../security/prompt-guard.js';
+import { RateLimiter } from '../security/rate-limit.js';
 
 export interface RouterMessage {
   id: string;
@@ -16,7 +18,8 @@ export interface RouterMessage {
     | 'msteams'
     | 'matrix'
     | 'webchat'
-    | 'slack';
+    | 'slack'
+    | 'whatsapp';
   metadata?: Record<string, unknown>;
   timestamp: Date;
 }
@@ -34,6 +37,7 @@ export type MessageHandler = (message: RouterMessage) => Promise<RouterResponse>
 export class MessageRouter {
   private agent: Agent | null = null;
   private handlers: Map<string, MessageHandler> = new Map();
+  private rateLimiter: RateLimiter;
   private stats: RouterStats = {
     totalMessages: 0,
     successfulMessages: 0,
@@ -42,6 +46,9 @@ export class MessageRouter {
   };
 
   constructor(agent?: Agent) {
+    const windowMs = parseInt(process.env.GATEWAY_RATE_LIMIT_WINDOW || '60000');
+    const maxRequests = parseInt(process.env.GATEWAY_RATE_LIMIT_MAX || '60');
+    this.rateLimiter = new RateLimiter({ windowMs, maxRequests, keyGenerator: (id) => `gw:${id}` });
     if (agent) {
       this.agent = agent;
     }
@@ -60,19 +67,34 @@ export class MessageRouter {
     }
 
     try {
+      const safeContent = promptGuard.sanitize(message.content || '');
+      const guardResult = promptGuard.validate(safeContent);
+      if (!guardResult.valid) {
+        throw new Error(guardResult.reason || 'Message blocked by safety policy');
+      }
+
+      if (safeContent.length > 10000) {
+        throw new Error('Message exceeds maximum length');
+      }
+
+      const rate = this.rateLimiter.check(message.userId || 'anonymous');
+      if (!rate.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rate.retryAfter}s.`);
+      }
+
       let conversationId = message.conversationId;
 
       if (!conversationId) {
         const result = await this.agent.startConversation(
           message.userId,
           message.source,
-          message.content
+          safeContent
         );
         conversationId = result.conversationId;
       }
 
       const response = await this.agent.processMessage(
-        message.content,
+        safeContent,
         conversationId,
         message.userId,
         message.source
@@ -184,6 +206,21 @@ export class MessageRouter {
       userId,
       conversationId,
       source: 'cli',
+      timestamp: new Date(),
+    });
+  }
+
+  async handleFromWhatsApp(
+    userId: string,
+    message: string,
+    conversationId?: string
+  ): Promise<RouterResponse> {
+    return this.route({
+      id: randomUUID(),
+      content: message,
+      userId,
+      conversationId,
+      source: 'whatsapp',
       timestamp: new Date(),
     });
   }

@@ -4,7 +4,7 @@ export interface RouterMessage {
     content: string;
     userId: string;
     conversationId?: string;
-    source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack';
+    source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp';
     metadata?: Record<string, unknown>;
     timestamp: Date;
 }
@@ -19,6 +19,7 @@ export type MessageHandler = (message: RouterMessage) => Promise<RouterResponse>
 export declare class MessageRouter {
     private agent;
     private handlers;
+    private rateLimiter;
     private stats;
     constructor(agent?: Agent);
     setAgent(agent: Agent): void;
@@ -31,6 +32,7 @@ export declare class MessageRouter {
     handleFromWebSocket(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromSlack(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromCLI(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
+    handleFromWhatsApp(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromSignal(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromGoogleChat(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromMSTeams(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;

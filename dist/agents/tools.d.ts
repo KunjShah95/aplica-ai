@@ -44,11 +44,11 @@ export declare class ToolRegistry {
         id: string;
         permissions: string[];
         createdAt: Date;
-        handler: string;
         updatedAt: Date;
+        category: string | null;
+        handler: string;
         isEnabled: boolean;
         schema: import("@prisma/client/runtime/library").JsonValue;
-        category: string | null;
         isBuiltin: boolean;
     }[]>;
     getEnabled(): Promise<{
@@ -57,20 +57,20 @@ export declare class ToolRegistry {
         id: string;
         permissions: string[];
         createdAt: Date;
-        handler: string;
         updatedAt: Date;
+        category: string | null;
+        handler: string;
         isEnabled: boolean;
         schema: import("@prisma/client/runtime/library").JsonValue;
-        category: string | null;
         isBuiltin: boolean;
     }[]>;
     enable(name: string): Promise<void>;
     disable(name: string): Promise<void>;
     getExecutionHistory(toolId: string, limit?: number): Promise<{
-        id: string;
-        status: import(".prisma/client").$Enums.ExecutionStatus;
-        createdAt: Date;
         error: string | null;
+        status: import(".prisma/client").$Enums.ExecutionStatus;
+        id: string;
+        createdAt: Date;
         duration: number | null;
         input: import("@prisma/client/runtime/library").JsonValue;
         output: import("@prisma/client/runtime/library").JsonValue | null;

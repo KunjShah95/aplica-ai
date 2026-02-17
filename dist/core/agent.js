@@ -1,20 +1,66 @@
 import { conversationManager } from './conversation.js';
 import { taskQueue } from './queue.js';
-import { executeCommand, executionContext } from '../execution/index.js';
+import { executeCommand, executionContext, setExecutionContext } from '../execution/index.js';
 import { promptGuard } from '../security/prompt-guard.js';
+import { promptManager } from './prompt-manager.js';
 export class Agent {
     config;
     llm;
     systemPrompt;
+    workspaceId;
+    userId;
     constructor(options) {
         this.config = options.config;
         this.llm = options.llm;
+        this.workspaceId = options.workspaceId;
+        this.userId = options.userId;
         this.systemPrompt = this.buildSystemPrompt();
+        if (this.workspaceId && this.userId) {
+            this.setupWorkspaceContext();
+        }
+    }
+    setupWorkspaceContext() {
+        if (this.workspaceId && this.userId) {
+            setExecutionContext({
+                userId: this.userId,
+                workspaceId: this.workspaceId,
+                role: this.config.user.role || 'USER',
+            });
+        }
     }
     buildSystemPrompt() {
         const soul = this.config.soul;
         const identity = this.config.identity;
-        return `# Identity
+        const variables = [
+            { name: 'identity.displayName', value: identity.displayName },
+            { name: 'identity.bio', value: identity.bio },
+            { name: 'identity.tagline', value: identity.tagline },
+            { name: 'soul.personality.traits', value: soul.personality.traits.join(', ') },
+            { name: 'soul.personality.defaultTone', value: soul.personality.defaultTone },
+            {
+                name: 'soul.personality.values',
+                value: soul.personality.values.map((v) => `- ${v}`).join('\n'),
+            },
+            {
+                name: 'soul.personality.boundaries',
+                value: soul.personality.boundaries.map((b) => `- ${b}`).join('\n'),
+            },
+            { name: 'user.name', value: this.config.user.name },
+            { name: 'identity.timezone', value: identity.timezone },
+            { name: 'identity.availability.enabled', value: String(identity.availability.enabled) },
+            {
+                name: 'identity.availability.defaultHours',
+                value: identity.availability.defaultHours || '',
+            },
+        ];
+        try {
+            return promptManager.generatePrompt({
+                templateName: 'System Default',
+                variables,
+            });
+        }
+        catch {
+            return `# Identity
 You are ${identity.displayName}, ${identity.bio}.
 
 ${identity.tagline}
@@ -48,6 +94,7 @@ You have access to execution capabilities that allow you to:
 ${identity.availability.enabled ? `- Availability: ${identity.availability.defaultHours}` : ''}
 
 You are helpful, precise, and proactive. You provide clear and concise responses while respecting user preferences and privacy.`;
+        }
     }
     async processMessage(content, conversationId, userId, source) {
         // 1. Security Check: Prompt Guard

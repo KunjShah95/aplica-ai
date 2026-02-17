@@ -48,17 +48,14 @@ async function evaluateCode(code, input) {
         Promise: Promise,
         ...input,
     };
-    const contextKeys = Object.keys(context);
-    const contextValues = Object.values(context);
-    const wrappedCode = `
-    (function(args) {
-      'use strict';
-      const { ${contextKeys.join(', ')} } = args;
-      ${code}
-    })
-  `;
-    const fn = eval(wrappedCode);
-    return fn(contextValues);
+    // Use vm.runInNewContext which provides a sandboxed environment
+    // We wrap code in an IIFE to allow 'return' statements
+    const wrappedCode = `(function() {
+    'use strict';
+    ${code}
+  })()`;
+    const vm = require('vm');
+    return vm.runInNewContext(wrappedCode, context, { timeout: task.timeout });
 }
 execute()
     .then((result) => {

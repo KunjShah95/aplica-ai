@@ -371,7 +371,7 @@ export class AuthService {
     });
 
     return {
-      userId: apiKey.userId,
+      userId: apiKey.userId!,
       scopes: apiKey.scopes,
     };
   }

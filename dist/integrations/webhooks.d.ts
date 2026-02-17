@@ -22,8 +22,8 @@ export declare class WebhookService {
         id: string;
         createdAt: Date;
         isActive: boolean;
-        url: string;
         updatedAt: Date;
+        url: string;
         secret: string | null;
         events: string[];
         lastTriggeredAt: Date | null;
@@ -34,8 +34,8 @@ export declare class WebhookService {
         id: string;
         createdAt: Date;
         isActive: boolean;
-        url: string;
         updatedAt: Date;
+        url: string;
         secret: string | null;
         events: string[];
         lastTriggeredAt: Date | null;
@@ -46,8 +46,8 @@ export declare class WebhookService {
         id: string;
         createdAt: Date;
         isActive: boolean;
-        url: string;
         updatedAt: Date;
+        url: string;
         secret: string | null;
         events: string[];
         lastTriggeredAt: Date | null;
@@ -63,8 +63,8 @@ export declare class WebhookService {
         id: string;
         createdAt: Date;
         isActive: boolean;
-        url: string;
         updatedAt: Date;
+        url: string;
         secret: string | null;
         events: string[];
         lastTriggeredAt: Date | null;
@@ -75,8 +75,8 @@ export declare class WebhookService {
         id: string;
         createdAt: Date;
         isActive: boolean;
-        url: string;
         updatedAt: Date;
+        url: string;
         secret: string | null;
         events: string[];
         lastTriggeredAt: Date | null;
@@ -85,10 +85,10 @@ export declare class WebhookService {
     trigger(event: string, data: Record<string, unknown>): Promise<void>;
     private send;
     getDeliveries(webhookId: string, limit?: number): Promise<{
+        error: string | null;
         id: string;
         payload: Prisma.JsonValue;
         createdAt: Date;
-        error: string | null;
         success: boolean;
         response: Prisma.JsonValue | null;
         webhookId: string;

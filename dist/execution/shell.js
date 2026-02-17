@@ -2,11 +2,86 @@ import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 export class ShellExecutor {
     allowedCommands = new Set();
-    blockedCommands = new Set(['rm', 'del', 'format', 'mkfs', 'dd', 'shred', 'wget', 'curl', 'nc']);
-    shellInterpreters = new Set(['bash', 'sh', 'zsh', 'cmd', 'powershell', 'pwsh', 'node', 'python', 'perl', 'ruby']);
+    blockedCommands = new Set([
+        'rm',
+        'del',
+        'erase',
+        'format',
+        'mkfs',
+        'dd',
+        'shred',
+        'rmdir',
+        'rd',
+        'shutdown',
+        'diskpart',
+        'bcdedit',
+        'wget',
+        'curl',
+        'nc',
+        'sudo',
+        'su',
+        'chmod',
+        'chown',
+        'ssh',
+        'scp',
+        'sftp',
+    ]);
+    shellInterpreters = new Set([
+        'bash',
+        'sh',
+        'zsh',
+        'cmd',
+        'cmd.exe',
+        'powershell',
+        'powershell.exe',
+        'pwsh',
+        'pwsh.exe',
+        'node',
+        'python',
+        'perl',
+        'ruby',
+    ]);
+    windowsBuiltins = new Set([
+        'dir',
+        'copy',
+        'move',
+        'type',
+        'echo',
+        'mkdir',
+        'rmdir',
+        'rd',
+        'ren',
+        'rename',
+        'del',
+        'cls',
+        'ver',
+        'set',
+        'path',
+        'cd',
+    ]);
     maxOutputSize = 1024 * 1024;
     defaultTimeout = 30000;
+    enforceAllowlist = false;
+    blockChaining = false;
+    secureMode = process.env.SECURE_MODE === 'true';
     constructor(options = {}) {
+        const envAllowed = process.env.EXEC_ALLOWED_COMMANDS || process.env.SHELL_ALLOWLIST;
+        const envBlocked = process.env.EXEC_BLOCKED_COMMANDS || process.env.SHELL_BLOCKLIST;
+        const envAllowlistEnabled = process.env.EXEC_ALLOWLIST_ENABLED === 'true';
+        if (envAllowed) {
+            envAllowed
+                .split(',')
+                .map((cmd) => cmd.trim())
+                .filter(Boolean)
+                .forEach((cmd) => this.allowedCommands.add(cmd));
+        }
+        if (envBlocked) {
+            envBlocked
+                .split(',')
+                .map((cmd) => cmd.trim())
+                .filter(Boolean)
+                .forEach((cmd) => this.blockedCommands.add(cmd));
+        }
         if (options.allowedCommands) {
             options.allowedCommands.forEach((cmd) => this.allowedCommands.add(cmd));
         }
@@ -19,19 +94,28 @@ export class ShellExecutor {
         if (options.defaultTimeout) {
             this.defaultTimeout = options.defaultTimeout;
         }
+        this.enforceAllowlist = options.enforceAllowlist ?? envAllowlistEnabled;
+        this.blockChaining = options.blockChaining ?? this.secureMode;
     }
     isCommandAllowed(command) {
         const baseCommand = command.split(' ')[0].toLowerCase().trim();
         if (this.blockedCommands.has(baseCommand)) {
             return false;
         }
-        if (this.allowedCommands.size > 0 && !this.allowedCommands.has(baseCommand)) {
+        if ((this.enforceAllowlist || this.allowedCommands.size > 0) && !this.allowedCommands.has(baseCommand)) {
             return false;
         }
         return true;
     }
     areArgsAllowed(command, args) {
         const baseCommand = command.split(' ')[0].toLowerCase().trim();
+        // Block command chaining in secure mode to reduce injection risk
+        if (this.blockChaining) {
+            const joinedArgs = args.join(' ');
+            if (/[;&|]{1,2}/.test(joinedArgs)) {
+                return { allowed: false, reason: 'Argument contains command chaining operators' };
+            }
+        }
         // If the command is a shell interpreter, we MUST check its arguments for dangerous sub-commands
         if (this.shellInterpreters.has(baseCommand)) {
             const joinedArgs = args.join(' ').toLowerCase();
@@ -64,7 +148,12 @@ export class ShellExecutor {
                 timestamp: new Date(),
             };
         }
-        const argCheck = this.areArgsAllowed(command, args);
+        const isWindows = process.platform === 'win32';
+        const baseCommand = command.split(' ')[0].toLowerCase().trim();
+        const isWindowsBuiltin = isWindows && this.windowsBuiltins.has(baseCommand);
+        const argCheck = isWindowsBuiltin
+            ? this.areArgsAllowed('cmd', [command, ...args])
+            : this.areArgsAllowed(command, args);
         if (!argCheck.allowed) {
             return {
                 id,
@@ -87,7 +176,11 @@ export class ShellExecutor {
                 maxBuffer: this.maxOutputSize,
                 encoding: 'utf8',
             };
-            const childProcess = spawn(command, args, spawnOptions);
+            const executionCommand = isWindowsBuiltin ? 'cmd' : command;
+            const executionArgs = isWindowsBuiltin
+                ? ['/C', `${command} ${args.join(' ')}`.trim()]
+                : args;
+            const childProcess = spawn(executionCommand, executionArgs, spawnOptions);
             const outputTimer = setTimeout(() => {
                 killed = true;
                 childProcess.kill('SIGTERM');

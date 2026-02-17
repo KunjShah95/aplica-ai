@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
+    
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -14,7 +14,32 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    
+    "paths": {
+      "@/*": ["./src/*"],
+      "@core/*": ["./src/core/*"],
+      "@db/*": ["./src/db/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@agents/*": ["./src/agents/*"],
+      "@workflows/*": ["./src/workflows/*"],
+      "@tools/*": ["./src/tools/*"],
+      "@skills/*": ["./src/skills/*"],
+      "@memory/*": ["./src/memory/*"],
+      "@security/*": ["./src/security/*"],
+      "@integrations/*": ["./src/integrations/*"],
+      "@gateway/*": ["./src/gateway/*"],
+      "@execution/*": ["./src/execution/*"],
+      "@teams/*": ["./src/teams/*"],
+      "@auth/*": ["./src/auth/*"],
+      "@api/*": ["./src/api/*"],
+      "@scheduler/*": ["./src/scheduler/*"],
+      "@storage/*": ["./src/storage/*"],
+      "@notifications/*": ["./src/notifications/*"],
+      "@monitoring/*": ["./src/monitoring/*"],
+      "@config/*": ["./src/config/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

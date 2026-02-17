@@ -16,10 +16,10 @@ export interface NotificationFilters {
 }
 export declare class NotificationService {
     create(input: CreateNotificationInput): Promise<{
+        type: import(".prisma/client").$Enums.NotificationType;
         id: string;
         content: string;
         userId: string;
-        type: import(".prisma/client").$Enums.NotificationType;
         createdAt: Date;
         title: string;
         metadata: Prisma.JsonValue;
@@ -28,10 +28,10 @@ export declare class NotificationService {
     }>;
     createBatch(notifications: CreateNotificationInput[]): Promise<Prisma.BatchPayload>;
     list(filters: NotificationFilters): Promise<{
+        type: import(".prisma/client").$Enums.NotificationType;
         id: string;
         content: string;
         userId: string;
-        type: import(".prisma/client").$Enums.NotificationType;
         createdAt: Date;
         title: string;
         metadata: Prisma.JsonValue;

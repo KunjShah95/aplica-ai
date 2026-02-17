@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import { validateEnv, isProduction, isDevelopment } from './env.js';
 export class ConfigLoader {
     config = null;
+    envConfig = null;
     async load() {
         if (this.config) {
             return this.config;
@@ -12,7 +14,16 @@ export class ConfigLoader {
         const identityPath = path.join(basePath, 'IDENTITY.md');
         const userPath = path.join(basePath, 'USER.md');
         if (!fs.existsSync(soulPath)) {
-            throw new Error(`SOUL.md not found at ${soulPath}`);
+            throw new Error(`SOUL.md not found at ${soulPath}. Run 'alpicia init' to create it.`);
+        }
+        try {
+            this.envConfig = validateEnv();
+        }
+        catch (error) {
+            if (isProduction()) {
+                throw error;
+            }
+            console.warn('Environment validation warning:', error.message);
         }
         const soul = await this.loadSoulConfig(soulPath);
         const identity = await this.loadIdentityConfig(identityPath);
@@ -30,7 +41,23 @@ export class ConfigLoader {
             memory,
             security,
         };
+        if (isDevelopment()) {
+            this.logConfigSummary(this.config);
+        }
         return this.config;
+    }
+    logConfigSummary(config) {
+        console.log('\n📋 Configuration Summary:');
+        console.log(`   LLM Provider: ${config.llm.provider} (${config.llm.model})`);
+        console.log(`   Messaging: ${[
+            config.messaging.telegram?.enabled && 'Telegram',
+            config.messaging.discord?.enabled && 'Discord',
+            config.messaging.slack?.enabled && 'Slack',
+            config.messaging.websocket?.enabled && 'WebSocket',
+        ]
+            .filter(Boolean)
+            .join(', ') || 'None'}`);
+        console.log(`   Memory: ${config.memory.type}${config.memory.postgres?.enableVector ? ' + vector' : ''}`);
     }
     async loadSoulConfig(filePath) {
         const content = fs.readFileSync(filePath, 'utf-8');

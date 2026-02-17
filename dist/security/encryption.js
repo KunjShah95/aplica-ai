@@ -126,12 +126,46 @@ export function sanitizeLogData(data, sensitiveKeys = ['password', 'token', 'sec
     const result = { ...data };
     for (const key of Object.keys(result)) {
         const lowerKey = key.toLowerCase();
+        const value = result[key];
         if (sensitiveKeys.some(sk => lowerKey.includes(sk.toLowerCase()))) {
             result[key] = '[REDACTED]';
+            continue;
         }
-        else if (typeof result[key] === 'object' && result[key] !== null) {
-            result[key] = sanitizeLogData(result[key], sensitiveKeys);
+        if (typeof value === 'string') {
+            result[key] = redactSensitiveText(value);
+            continue;
         }
+        if (Array.isArray(value)) {
+            result[key] = value.map((item) => {
+                if (typeof item === 'string')
+                    return redactSensitiveText(item);
+                if (item && typeof item === 'object') {
+                    return sanitizeLogData(item, sensitiveKeys);
+                }
+                return item;
+            });
+            continue;
+        }
+        if (typeof value === 'object' && value !== null) {
+            result[key] = sanitizeLogData(value, sensitiveKeys);
+        }
+    }
+    return result;
+}
+export function redactSensitiveText(text) {
+    let result = text;
+    const patterns = [
+        { label: 'OPENAI', regex: /\bsk-[A-Za-z0-9]{20,}\b/g },
+        { label: 'ANTHROPIC', regex: /\bsk-ant-[A-Za-z0-9]{20,}\b/gi },
+        { label: 'SLACK', regex: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
+        { label: 'GITHUB', regex: /\bgh[ps]_[A-Za-z0-9]{20,}\b/g },
+        { label: 'GOOGLE', regex: /\bAIza[0-9A-Za-z\-_]{20,}\b/g },
+        { label: 'AWS', regex: /\bAKIA[0-9A-Z]{16}\b/g },
+        { label: 'JWT', regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g },
+        { label: 'PRIVATE_KEY', regex: /-----BEGIN (?:RSA|EC|DSA|OPENSSH) PRIVATE KEY-----[\s\S]*?-----END (?:RSA|EC|DSA|OPENSSH) PRIVATE KEY-----/g },
+    ];
+    for (const { label, regex } of patterns) {
+        result = result.replace(regex, `[REDACTED_${label}]`);
     }
     return result;
 }

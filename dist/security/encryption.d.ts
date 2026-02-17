@@ -29,6 +29,7 @@ export declare function maskEmail(email: string): string;
 export declare function maskApiKey(key: string): string;
 export declare function sanitizeHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string>;
 export declare function sanitizeLogData<T extends Record<string, unknown>>(data: T, sensitiveKeys?: string[]): T;
+export declare function redactSensitiveText(text: string): string;
 export declare const encryption: Encryption;
 export declare const secureStorage: SecureStorage;
 //# sourceMappingURL=encryption.d.ts.map

@@ -52,7 +52,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - '5435:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U alpicia -d alpicia']
       interval: 10s

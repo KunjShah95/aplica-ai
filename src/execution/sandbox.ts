@@ -10,6 +10,7 @@ export interface SandboxOptions {
   allowedModules?: string[];
   workingDirectory?: string;
   useDocker?: boolean;
+  allowInsecureFallback?: boolean;
 }
 
 export interface SandboxExecutionResult {
@@ -34,13 +35,16 @@ export class SandboxExecutor {
   private defaultMemoryLimit: number = 512 * 1024 * 1024;
   private defaultCpuLimit: number = 50;
   private useDocker: boolean = true;
+  private allowInsecureFallback: boolean = true;
   private dockerExecutor: DockerSandboxExecutor;
 
   constructor(private options: SandboxOptions = {}) {
+    const secureMode = process.env.SECURE_MODE === 'true';
     this.defaultTimeout = options.timeout ?? 30000;
     this.defaultMemoryLimit = options.memoryLimit ?? 512 * 1024 * 1024;
     this.defaultCpuLimit = options.cpuLimit ?? 50;
     this.useDocker = options.useDocker ?? true;
+    this.allowInsecureFallback = options.allowInsecureFallback ?? !secureMode;
     this.dockerExecutor = new DockerSandboxExecutor(options);
   }
 
@@ -55,8 +59,29 @@ export class SandboxExecutor {
           return { ...dockerResult, secure: true };
         }
         // If docker failed to start (not code error), fallback or error out
+        if (!this.allowInsecureFallback) {
+          return {
+            ...dockerResult,
+            success: false,
+            error: 'Secure sandbox unavailable; insecure fallback is disabled.',
+            secure: true,
+          };
+        }
+
         console.warn('Docker sandbox failed to start, falling back to VM isolation (LESS SECURE). Error:', dockerResult.error);
       } catch (e) {
+        if (!this.allowInsecureFallback) {
+          return {
+            id,
+            success: false,
+            output: '',
+            error: 'Secure sandbox unavailable; insecure fallback is disabled.',
+            executionTime: Date.now() - startTime,
+            timestamp: new Date(),
+            secure: true,
+          };
+        }
+
         console.warn('Docker sandbox exception, falling back to VM isolation (LESS SECURE).', e);
       }
     }

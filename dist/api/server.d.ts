@@ -16,6 +16,12 @@ export declare class ApiServer {
     private handleGetMe;
     private handleUpdateMe;
     private handleChangePassword;
+    private handleGoogleOAuthRedirect;
+    private handleGoogleOAuthCallback;
+    private handleGitHubOAuthRedirect;
+    private handleGitHubOAuthCallback;
+    private handleDiscordOAuthRedirect;
+    private handleDiscordOAuthCallback;
     private handleListApiKeys;
     private handleCreateApiKey;
     private handleRevokeApiKey;
@@ -52,6 +58,10 @@ export declare class ApiServer {
     private handleGetDashboard;
     private handleGetUsage;
     private handleGetAuditLogs;
+    private ensureAdmin;
+    private handleListApprovals;
+    private handleApproveRequest;
+    private handleDenyRequest;
     private handleHealth;
 }
 export declare const apiServer: ApiServer;

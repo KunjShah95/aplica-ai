@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { sanitizeLogData } from './encryption.js';
 
 export type AuditEventType =
   | 'authentication'
@@ -161,8 +162,6 @@ export class AuditLogger {
   }
 
   private sanitizeEvent(event: AuditEvent): AuditEvent {
-    if (!this.enableEncryption) return event;
-
     const sanitized = { ...event };
 
     if (sanitized.parameters) {
@@ -177,19 +176,7 @@ export class AuditLogger {
   }
 
   private sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (this.sensitiveFields.has(key.toLowerCase())) {
-        result[key] = '[REDACTED]';
-      } else if (typeof value === 'object' && value !== null) {
-        result[key] = this.sanitizeObject(value as Record<string, unknown>);
-      } else {
-        result[key] = value;
-      }
-    }
-
-    return result;
+    return sanitizeLogData(obj, Array.from(this.sensitiveFields));
   }
 
   async logCommandExecution(

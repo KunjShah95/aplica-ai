@@ -6,7 +6,7 @@ export interface Message {
     metadata?: MessageMetadata;
 }
 export interface MessageMetadata {
-    source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'assistant' | 'system' | 'slack';
+    source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'assistant' | 'system' | 'slack' | 'whatsapp';
     userId: string;
     conversationId: string;
     platformMessageId?: string;
@@ -21,7 +21,7 @@ export interface Conversation {
     metadata: ConversationMetadata;
 }
 export interface ConversationMetadata {
-    platform: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack';
+    platform: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp';
     title?: string;
     tags: string[];
 }

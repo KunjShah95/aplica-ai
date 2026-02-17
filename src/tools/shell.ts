@@ -48,79 +48,7 @@ export class ShellTool {
 
   constructor(config?: { allowedCommands?: string[]; blockedCommands?: string[] }) {
     this.allowedCommands = new Set(
-      config?.allowedCommands || [
-        'ls',
-        'cat',
-        'echo',
-        'pwd',
-        'mkdir',
-        'touch',
-
-        'cp',
-        'mv',
-        'head',
-        'tail',
-        'grep',
-        'find',
-        'wc',
-        'sort',
-        'uniq',
-        'cut',
-        'tr',
-        'sed',
-        'awk',
-        'diff',
-        'patch',
-        'git',
-        'npm',
-        'yarn',
-        'pnpm',
-        'docker',
-        'docker-compose',
-        'kubectl',
-        'helm',
-        'curl',
-        'wget',
-        'ping',
-        'traceroute',
-        'netstat',
-        'ss',
-        'ip',
-        'ifconfig',
-        'ps',
-        'top',
-        'htop',
-        'kill',
-        'killall',
-        'jobs',
-        'bg',
-        'fg',
-        'nohup',
-        'tar',
-        'gzip',
-        'bzip2',
-        'xz',
-        'zip',
-        'unzip',
-        'rsync',
-        'scp',
-
-        'chgrp',
-        'ln',
-        'readlink',
-        'realpath',
-        'basename',
-        'dirname',
-        'date',
-        'cal',
-        'whoami',
-        'hostname',
-        'uname',
-        'uptime',
-        'df',
-        'du',
-        'free',
-      ]
+      config?.allowedCommands || this.getDefaultAllowedCommands()
     );
     this.blockedCommands = new Set(
       config?.blockedCommands || [
@@ -149,6 +77,13 @@ export class ShellTool {
         'ssh',
         'chmod',
         'chown',
+        'del',
+        'erase',
+        'rmdir',
+        'rd',
+        'format',
+        'diskpart',
+        'bcdedit',
       ]
     );
     this.commandHistory = new Map();
@@ -352,6 +287,29 @@ export class ShellTool {
 
   async getProcessInfo(pid: number): Promise<ProcessInfo | null> {
     try {
+      if (process.platform === 'win32') {
+        const { stdout } = await execAsync(
+          `tasklist /FI "PID eq ${pid}" /FO CSV /NH`,
+          { encoding: 'utf-8' }
+        );
+
+        const line = stdout.trim();
+        if (!line || line.startsWith('INFO:')) return null;
+
+        const parts = line.split(',').map((p) => p.replace(/^"|"$/g, ''));
+        const name = parts[0];
+        const foundPid = parseInt(parts[1], 10);
+        if (!name || isNaN(foundPid)) return null;
+
+        return {
+          pid: foundPid,
+          command: name,
+          arguments: [name],
+          cwd: '',
+          startTime: new Date(),
+        };
+      }
+
       const { stdout } = await execAsync(`ps -p ${pid} -o comm= -o args= -o cwd= -o lstart=`, {
         encoding: 'utf-8',
       });
@@ -373,6 +331,29 @@ export class ShellTool {
 
   async listProcesses(): Promise<ProcessInfo[]> {
     try {
+      if (process.platform === 'win32') {
+        const { stdout } = await execAsync('tasklist /FO CSV /NH', { encoding: 'utf-8' });
+        const lines = stdout.split('\n').filter(Boolean).slice(0, 50);
+        const processes: ProcessInfo[] = [];
+
+        for (const line of lines) {
+          const parts = line.split(',').map((p) => p.replace(/^"|"$/g, ''));
+          const name = parts[0];
+          const pid = parseInt(parts[1], 10);
+          if (name && !isNaN(pid)) {
+            processes.push({
+              pid,
+              command: name,
+              arguments: [name],
+              startTime: new Date(),
+              cwd: '',
+            });
+          }
+        }
+
+        return processes.slice(0, 20);
+      }
+
       const { stdout } = await execAsync('ps aux | head -50', { encoding: 'utf-8' });
 
       const lines = stdout.split('\n').slice(1);
@@ -405,6 +386,11 @@ export class ShellTool {
 
   async which(command: string): Promise<string | null> {
     try {
+      if (process.platform === 'win32') {
+        const { stdout } = await execAsync(`where ${command}`);
+        return stdout.trim().split('\n')[0] || null;
+      }
+
       const { stdout } = await execAsync(`which ${command}`);
       return stdout.trim() || null;
     } catch {
@@ -461,12 +447,16 @@ export class ShellTool {
     const dangerousPatterns = [
       /;\s*rm\s+/i,
       /\|\s*rm\s+/i,
+      /;\s*(del|erase|rmdir|rd)\s+/i,
+      /\|\s*(del|erase|rmdir|rd)\s+/i,
       /\$\(/,
       /`[^`]+`/,
       />\s*\/dev\/null/,
       /2>\s*&1/,
       /&&\s*rm\s+/i,
       /\|\|\s*rm\s+/i,
+      /&&\s*(del|erase|rmdir|rd)\s+/i,
+      /\|\|\s*(del|erase|rmdir|rd)\s+/i,
       /eval\s*\(/i,
       /exec\s+/i,
     ];
@@ -524,5 +514,113 @@ export class ShellTool {
         this.commandHistory.delete(firstKey);
       }
     }
+  }
+
+  private getDefaultAllowedCommands(): string[] {
+    if (process.platform === 'win32') {
+      return [
+        'dir',
+        'type',
+        'echo',
+        'cd',
+        'mkdir',
+        'copy',
+        'move',
+        'where',
+        'tasklist',
+        'ipconfig',
+        'netstat',
+        'ping',
+        'tracert',
+        'systeminfo',
+        'whoami',
+        'hostname',
+        'powershell',
+        'pwsh',
+        'cmd',
+        'git',
+        'npm',
+        'yarn',
+        'pnpm',
+        'docker',
+        'docker-compose',
+        'kubectl',
+        'helm',
+      ];
+    }
+
+    return [
+      'ls',
+      'cat',
+      'echo',
+      'pwd',
+      'mkdir',
+      'touch',
+
+      'cp',
+      'mv',
+      'head',
+      'tail',
+      'grep',
+      'find',
+      'wc',
+      'sort',
+      'uniq',
+      'cut',
+      'tr',
+      'sed',
+      'awk',
+      'diff',
+      'patch',
+      'git',
+      'npm',
+      'yarn',
+      'pnpm',
+      'docker',
+      'docker-compose',
+      'kubectl',
+      'helm',
+      'curl',
+      'wget',
+      'ping',
+      'traceroute',
+      'netstat',
+      'ss',
+      'ip',
+      'ifconfig',
+      'ps',
+      'top',
+      'htop',
+      'kill',
+      'killall',
+      'jobs',
+      'bg',
+      'fg',
+      'nohup',
+      'tar',
+      'gzip',
+      'bzip2',
+      'xz',
+      'zip',
+      'unzip',
+      'rsync',
+      'scp',
+
+      'chgrp',
+      'ln',
+      'readlink',
+      'realpath',
+      'basename',
+      'dirname',
+      'date',
+      'cal',
+      'whoami',
+      'hostname',
+      'uname',
+      'uptime',
+      'df',
+      'du',
+      'free',
+    ];
   }
 }

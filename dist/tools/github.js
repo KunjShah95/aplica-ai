@@ -91,10 +91,15 @@ export class GitHubTool {
                     login: issue.user?.login || '',
                     avatarUrl: issue.user?.avatar_url || '',
                 },
-                labels: issue.labels.map((label) => ({
-                    name: label.name,
-                    color: label.color,
-                })),
+                labels: issue.labels.map((label) => {
+                    if (typeof label === 'string') {
+                        return { name: label, color: '' };
+                    }
+                    return {
+                        name: label.name || '',
+                        color: label.color || '',
+                    };
+                }),
                 assignees: (issue.assignees || []).map((user) => ({
                     login: user.login || '',
                     avatarUrl: user.avatar_url || '',

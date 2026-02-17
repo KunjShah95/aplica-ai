@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash, verify as verifySignature } from 'crypto';
 export class SkillLoader {
     skills = new Map();
     skillsPath;
@@ -49,6 +50,9 @@ export class SkillLoader {
         }
         const skillInstance = new SkillClass();
         if (manifest) {
+            const verified = await this.verifyManifest(manifest, filePath, true);
+            if (!verified)
+                return null;
             skillInstance.manifest = manifest;
         }
         return skillInstance;
@@ -91,6 +95,9 @@ export class SkillLoader {
         }
         const content = fs.readFileSync(manifestPath, 'utf-8');
         const manifest = await this.parseManifest(content);
+        const verified = await this.verifyManifest(manifest, indexPath, false);
+        if (!verified)
+            return null;
         const module = await import(indexPath);
         const executeFn = module.execute || module.default;
         if (typeof executeFn !== 'function') {
@@ -118,6 +125,9 @@ export class SkillLoader {
                 description: String(frontmatter.description || ''),
                 author: frontmatter.author,
                 license: frontmatter.license,
+                trust: frontmatter.trust || undefined,
+                signature: frontmatter.signature,
+                integrity: frontmatter.integrity,
                 triggers: this.parseTriggers(frontmatter.triggers),
                 parameters: this.parseParameters(frontmatter.parameters),
                 permissions: Array.isArray(frontmatter.permissions)
@@ -129,6 +139,54 @@ export class SkillLoader {
         catch (error) {
             throw new Error(`Failed to parse manifest: ${error}`);
         }
+    }
+    async verifyManifest(manifest, indexPath, isBuiltin) {
+        const secureMode = process.env.SECURE_MODE === 'true';
+        const requiredTrustLevels = (process.env.SKILL_TRUST_LEVELS || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const trust = manifest.trust || (isBuiltin ? 'verified' : 'unverified');
+        if (secureMode) {
+            const allowedTrustLevels = requiredTrustLevels.length > 0 ? requiredTrustLevels : ['verified', 'community'];
+            if (!allowedTrustLevels.includes(trust)) {
+                console.warn(`Skill ${manifest.name} blocked (trust=${trust})`);
+                return false;
+            }
+        }
+        const signatureRequired = process.env.SKILL_SIGNATURE_REQUIRED === 'true';
+        if (signatureRequired && !manifest.signature) {
+            console.warn(`Skill ${manifest.name} blocked (missing signature)`);
+            return false;
+        }
+        const integrityRequired = process.env.SKILL_INTEGRITY_REQUIRED === 'true';
+        let computedHash = null;
+        if (integrityRequired || manifest.integrity || manifest.signature) {
+            const content = fs.readFileSync(indexPath, 'utf-8');
+            computedHash = createHash('sha256').update(content).digest('hex');
+            if (!manifest.integrity || manifest.integrity !== computedHash) {
+                console.warn(`Skill ${manifest.name} blocked (integrity mismatch)`);
+                return false;
+            }
+        }
+        if (manifest.signature) {
+            const publicKey = process.env.SKILL_PUBLIC_KEY;
+            if (!publicKey) {
+                console.warn(`Skill ${manifest.name} blocked (missing public key)`);
+                return false;
+            }
+            const algorithm = (process.env.SKILL_SIGNATURE_ALGORITHM || 'RSA-SHA256').toLowerCase();
+            const data = Buffer.from(manifest.integrity || computedHash || '', 'utf8');
+            const signature = Buffer.from(manifest.signature, 'base64');
+            const isValid = algorithm === 'ed25519'
+                ? verifySignature(null, data, publicKey, signature)
+                : verifySignature(algorithm, data, publicKey, signature);
+            if (!isValid) {
+                console.warn(`Skill ${manifest.name} blocked (signature verification failed)`);
+                return false;
+            }
+        }
+        return true;
     }
     parseTriggers(triggers) {
         if (!Array.isArray(triggers))

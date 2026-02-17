@@ -56,7 +56,7 @@ export class GoogleCalendarService {
       config.clientId,
       config.clientSecret,
       config.redirectUri
-    );
+    ) as any;
 
     if (config.refreshToken) {
       this.oauth2Client.setCredentials({
@@ -64,7 +64,7 @@ export class GoogleCalendarService {
       });
     }
 
-    this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+    this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client as any });
   }
 
   setCredentials(tokens: { access_token?: string; refresh_token?: string }) {

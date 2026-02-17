@@ -8,18 +8,19 @@ export interface Message {
 
 export interface MessageMetadata {
   source:
-  | 'telegram'
-  | 'discord'
-  | 'websocket'
-  | 'cli'
-  | 'signal'
-  | 'googlechat'
-  | 'msteams'
-  | 'matrix'
-  | 'webchat'
-  | 'assistant'
-  | 'system'
-  | 'slack';
+    | 'telegram'
+    | 'discord'
+    | 'websocket'
+    | 'cli'
+    | 'signal'
+    | 'googlechat'
+    | 'msteams'
+    | 'matrix'
+    | 'webchat'
+    | 'assistant'
+    | 'system'
+    | 'slack'
+    | 'whatsapp';
   userId: string;
   conversationId: string;
   platformMessageId?: string;
@@ -37,16 +38,17 @@ export interface Conversation {
 
 export interface ConversationMetadata {
   platform:
-  | 'telegram'
-  | 'discord'
-  | 'websocket'
-  | 'cli'
-  | 'signal'
-  | 'googlechat'
-  | 'msteams'
-  | 'matrix'
-  | 'webchat'
-  | 'slack';
+    | 'telegram'
+    | 'discord'
+    | 'websocket'
+    | 'cli'
+    | 'signal'
+    | 'googlechat'
+    | 'msteams'
+    | 'matrix'
+    | 'webchat'
+    | 'slack'
+    | 'whatsapp';
   title?: string;
   tags: string[];
 }

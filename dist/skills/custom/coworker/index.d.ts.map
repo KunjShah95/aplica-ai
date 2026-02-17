@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/skills/custom/coworker/index.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,KAAK,EAAE,qBAAqB,EAAE,WAAW,EAAE,MAAM,iBAAiB,CAAC;AAW5E,qBAAa,aAAc,YAAW,KAAK;IACvC,QAAQ,EAAE,GAAG,CAAC;IACd,OAAO,CAAC,OAAO,CAAwB;IACvC,OAAO,CAAC,IAAI,CAAqB;IAE3B,OAAO,CAAC,OAAO,EAAE,qBAAqB,GAAG,OAAO,CAAC,WAAW,CAAC;CA0QtE"}

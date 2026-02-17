@@ -40,10 +40,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     get(id: string): Promise<ConversationWithMessages | null>;
     list(userId: string, options?: {
@@ -63,13 +63,13 @@ export declare class ConversationService {
     }[]>;
     addMessage(input: AddMessageInput): Promise<{
         id: string;
+        role: import(".prisma/client").$Enums.MessageRole;
         content: string;
         model: string | null;
         toolCalls: Prisma.JsonValue | null;
         conversationId: string;
         createdAt: Date;
         parentId: string | null;
-        role: import(".prisma/client").$Enums.MessageRole;
         metadata: Prisma.JsonValue;
         tokenCount: number | null;
     }>;
@@ -78,13 +78,13 @@ export declare class ConversationService {
         before?: string;
     }): Promise<{
         id: string;
+        role: import(".prisma/client").$Enums.MessageRole;
         content: string;
         model: string | null;
         toolCalls: Prisma.JsonValue | null;
         conversationId: string;
         createdAt: Date;
         parentId: string | null;
-        role: import(".prisma/client").$Enums.MessageRole;
         metadata: Prisma.JsonValue;
         tokenCount: number | null;
     }[]>;
@@ -95,10 +95,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     updateSummary(id: string, summary: string): Promise<{
         id: string;
@@ -107,10 +107,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     archive(id: string): Promise<{
         id: string;
@@ -119,10 +119,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     unarchive(id: string): Promise<{
         id: string;
@@ -131,10 +131,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     delete(id: string): Promise<{
         id: string;
@@ -143,10 +143,10 @@ export declare class ConversationService {
         summary: string | null;
         title: string | null;
         updatedAt: Date;
+        workspaceId: string | null;
         platform: string;
         metadata: Prisma.JsonValue;
         isArchived: boolean;
-        workspaceId: string | null;
     }>;
     share(conversationId: string, expiresInDays?: number): Promise<{
         shareToken: string;

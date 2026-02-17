@@ -4,6 +4,9 @@ export interface SkillManifest {
     description: string;
     author?: string;
     license?: string;
+    trust?: 'verified' | 'community' | 'unverified';
+    signature?: string;
+    integrity?: string;
     triggers: SkillTrigger[];
     parameters: SkillParameter[];
     permissions: string[];
@@ -64,6 +67,7 @@ export declare class SkillLoader {
     private loadCustomSkills;
     private loadCustomSkill;
     private parseManifest;
+    private verifyManifest;
     private parseTriggers;
     private parseParameters;
     getSkill(name: string): Skill | undefined;

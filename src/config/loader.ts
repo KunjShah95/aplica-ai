@@ -10,9 +10,11 @@ import {
   MessagingConfig,
   MemoryConfig,
 } from './types';
+import { validateEnv, isProduction, isDevelopment } from './env.js';
 
 export class ConfigLoader {
   private config: AppConfig | null = null;
+  private envConfig: ReturnType<typeof validateEnv> | null = null;
 
   async load(): Promise<AppConfig> {
     if (this.config) {
@@ -25,7 +27,16 @@ export class ConfigLoader {
     const userPath = path.join(basePath, 'USER.md');
 
     if (!fs.existsSync(soulPath)) {
-      throw new Error(`SOUL.md not found at ${soulPath}`);
+      throw new Error(`SOUL.md not found at ${soulPath}. Run 'alpicia init' to create it.`);
+    }
+
+    try {
+      this.envConfig = validateEnv();
+    } catch (error) {
+      if (isProduction()) {
+        throw error;
+      }
+      console.warn('Environment validation warning:', (error as Error).message);
     }
 
     const soul = await this.loadSoulConfig(soulPath);
@@ -46,7 +57,31 @@ export class ConfigLoader {
       security,
     };
 
+    if (isDevelopment()) {
+      this.logConfigSummary(this.config);
+    }
+
     return this.config;
+  }
+
+  private logConfigSummary(config: AppConfig): void {
+    console.log('\n📋 Configuration Summary:');
+    console.log(`   LLM Provider: ${config.llm.provider} (${config.llm.model})`);
+    console.log(
+      `   Messaging: ${
+        [
+          config.messaging.telegram?.enabled && 'Telegram',
+          config.messaging.discord?.enabled && 'Discord',
+          config.messaging.slack?.enabled && 'Slack',
+          config.messaging.websocket?.enabled && 'WebSocket',
+        ]
+          .filter(Boolean)
+          .join(', ') || 'None'
+      }`
+    );
+    console.log(
+      `   Memory: ${config.memory.type}${config.memory.postgres?.enableVector ? ' + vector' : ''}`
+    );
   }
 
   private async loadSoulConfig(filePath: string): Promise<SoulConfig> {
@@ -132,16 +167,16 @@ export class ConfigLoader {
     return {
       telegram: telegramEnabled
         ? {
-          enabled: true,
-          token: process.env.TELEGRAM_TOKEN || '',
-        }
+            enabled: true,
+            token: process.env.TELEGRAM_TOKEN || '',
+          }
         : undefined,
       discord: discordEnabled
         ? {
-          enabled: true,
-          token: process.env.DISCORD_TOKEN || '',
-          guildId: process.env.DISCORD_GUILD_ID || '',
-        }
+            enabled: true,
+            token: process.env.DISCORD_TOKEN || '',
+            guildId: process.env.DISCORD_GUILD_ID || '',
+          }
         : undefined,
       websocket: {
         enabled: process.env.WS_ENABLED !== 'false',

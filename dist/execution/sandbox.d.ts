@@ -5,6 +5,7 @@ export interface SandboxOptions {
     allowedModules?: string[];
     workingDirectory?: string;
     useDocker?: boolean;
+    allowInsecureFallback?: boolean;
 }
 export interface SandboxExecutionResult {
     id: string;
@@ -27,6 +28,7 @@ export declare class SandboxExecutor {
     private defaultMemoryLimit;
     private defaultCpuLimit;
     private useDocker;
+    private allowInsecureFallback;
     private dockerExecutor;
     constructor(options?: SandboxOptions);
     execute(task: SandboxedTask): Promise<SandboxExecutionResult>;

@@ -20,13 +20,19 @@ export declare class ShellExecutor {
     private allowedCommands;
     private blockedCommands;
     private shellInterpreters;
+    private windowsBuiltins;
     private maxOutputSize;
     private defaultTimeout;
+    private enforceAllowlist;
+    private blockChaining;
+    private secureMode;
     constructor(options?: {
         allowedCommands?: string[];
         blockedCommands?: string[];
         maxOutputSize?: number;
         defaultTimeout?: number;
+        enforceAllowlist?: boolean;
+        blockChaining?: boolean;
     });
     private isCommandAllowed;
     private areArgsAllowed;

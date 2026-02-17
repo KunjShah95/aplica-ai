@@ -4,6 +4,7 @@ import { knowledgeBaseService } from '../memory/knowledge-base.js';
 import { personaService } from '../agents/persona.js';
 import { ConstitutionalAI } from './security/constitutional.js';
 import { ApprovalManager } from './security/approval.js';
+import { promptGuard } from '../security/prompt-guard.js';
 
 export interface AgentMessage {
     role: 'system' | 'user' | 'assistant' | 'tool';
@@ -59,10 +60,10 @@ export class AgentOrchestrator {
         const toolsUsed: string[] = [];
         let iterations = 0;
 
-        const systemPrompt = await this.buildSystemPrompt(config);
+        let systemPrompt = await this.buildSystemPrompt(config);
         messages.push({ role: 'system', content: systemPrompt });
 
-        const context = await this.gatherContext(userMessage, config);
+        let context = await this.gatherContext(userMessage, config);
         if (context) {
             messages.push({
                 role: 'system',
@@ -70,10 +71,20 @@ export class AgentOrchestrator {
             });
         }
 
-        messages.push({ role: 'user', content: userMessage });
+        let sanitizedMessage = promptGuard.sanitize(userMessage);
+        let promptCheck = promptGuard.validate(sanitizedMessage);
+        if (!promptCheck.valid) {
+            return {
+                response: `[Safety Refusal] ${promptCheck.reason}`,
+                iterations: 0,
+                toolsUsed: [],
+            };
+        }
+
+        messages.push({ role: 'user', content: sanitizedMessage });
 
         // CONSTITUTIONAL PRE-CHECK (Faster)
-        const safety = await ConstitutionalAI.validateInput(userMessage);
+        const safety = await ConstitutionalAI.validateInput(sanitizedMessage);
         if (!safety.safe) {
             return {
                 response: `[Safety Refusal] ${safety.reason}`,
@@ -180,7 +191,9 @@ export class AgentOrchestrator {
             .pop();
 
         return {
-            response: lastAssistantMessage?.content || 'Maximum iterations reached without completion.',
+            response: ConstitutionalAI.sanitizeOutput(
+                lastAssistantMessage?.content || 'Maximum iterations reached without completion.'
+            ),
             iterations,
             toolsUsed,
         };
@@ -200,7 +213,15 @@ export class AgentOrchestrator {
             messages.push({ role: 'system', content: `Relevant context:\n${context}` });
         }
 
-        messages.push({ role: 'user', content: userMessage });
+        const sanitizedMessage = promptGuard.sanitize(userMessage);
+        const promptCheck = promptGuard.validate(sanitizedMessage);
+        if (!promptCheck.valid) {
+            yield { type: 'text', content: `[Safety Refusal] ${promptCheck.reason}` };
+            yield { type: 'done', content: `[Safety Refusal] ${promptCheck.reason}` };
+            return;
+        }
+
+        messages.push({ role: 'user', content: sanitizedMessage });
 
         let iterations = 0;
         const maxIter = config.maxIterations || this.maxIterations;
@@ -215,11 +236,11 @@ export class AgentOrchestrator {
             });
 
             if (response.content) {
-                yield { type: 'text', content: response.content };
+                yield { type: 'text', content: ConstitutionalAI.sanitizeOutput(response.content) };
             }
 
             if (response.finished || !response.toolCalls?.length) {
-                yield { type: 'done', content: response.content };
+                yield { type: 'done', content: ConstitutionalAI.sanitizeOutput(response.content) };
                 return;
             }
 
@@ -264,7 +285,7 @@ export class AgentOrchestrator {
             }
         }
 
-        yield { type: 'done', content: 'Maximum iterations reached.' };
+        yield { type: 'done', content: ConstitutionalAI.sanitizeOutput('Maximum iterations reached.') };
     }
 
     private async buildSystemPrompt(config: AgentConfig): Promise<string> {

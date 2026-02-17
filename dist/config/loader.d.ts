@@ -1,7 +1,9 @@
 import { AppConfig } from './types';
 export declare class ConfigLoader {
     private config;
+    private envConfig;
     load(): Promise<AppConfig>;
+    private logConfigSummary;
     private loadSoulConfig;
     private loadIdentityConfig;
     private loadUserContext;

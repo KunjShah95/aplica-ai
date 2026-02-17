@@ -73,7 +73,7 @@ async function evaluateCode(code: string, input?: Record<string, unknown>): Prom
   })()`;
 
   const vm = require('vm');
-  return vm.runInNewContext(wrappedCode, context);
+  return vm.runInNewContext(wrappedCode, context, { timeout: task.timeout });
 }
 
 execute()

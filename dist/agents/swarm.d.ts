@@ -6,6 +6,8 @@ export interface AgentConfig {
     capabilities: string[];
     maxTasks?: number;
     priority?: number;
+    model?: string;
+    systemPrompt?: string;
 }
 export interface Task {
     id: string;
@@ -35,18 +37,30 @@ export interface SwarmStats {
     failedTasks: number;
     avgResponseTime: number;
 }
+export interface SwarmConfig {
+    name: string;
+    workflow: 'sequential' | 'parallel' | 'hierarchical';
+    maxConcurrency?: number;
+    maxRetries?: number;
+}
 export declare class AgentSwarm extends EventEmitter {
     private agents;
     private tasks;
     private messageQueue;
     private coordinator;
+    private config;
     private stats;
-    constructor();
+    constructor(config?: Partial<SwarmConfig>);
+    setConfig(config: Partial<SwarmConfig>): void;
     registerAgent(config: AgentConfig): void;
     unregisterAgent(agentId: string): boolean;
     private assignNewCoordinator;
     submitTask(task: Omit<Task, 'id' | 'status' | 'createdAt' | 'updatedAt'>): Promise<Task>;
-    private dispatchTask;
+    private dispatchTaskSequential;
+    private dispatchTaskParallel;
+    private dispatchTaskHierarchical;
+    private getEligibleAgents;
+    private assignTaskToAgent;
     completeTask(taskId: string, result: unknown): Promise<void>;
     failTask(taskId: string, error: string): Promise<void>;
     private checkDependencies;
@@ -64,6 +78,19 @@ export declare class AgentSwarm extends EventEmitter {
         dependsOn?: string[];
         payload: Record<string, unknown>;
     }>): Promise<string[]>;
+    clear(): void;
+}
+export declare class SwarmOrchestrator {
+    private swarms;
+    private defaultSwarm;
+    constructor();
+    createSwarm(name: string, config?: Partial<SwarmConfig>): AgentSwarm;
+    getSwarm(name?: string): AgentSwarm;
+    deleteSwarm(name: string): boolean;
+    getAllSwarms(): string[];
+    executeMultiSwarmTask(task: Omit<Task, 'id' | 'status' | 'createdAt' | 'updatedAt'>, swarmNames?: string[]): Promise<Map<string, Task>>;
+    getGlobalStats(): Record<string, SwarmStats>;
 }
 export declare const agentSwarm: AgentSwarm;
+export declare const swarmOrchestrator: SwarmOrchestrator;
 //# sourceMappingURL=swarm.d.ts.map

@@ -14,6 +14,9 @@ import { rssReader } from '../tools/rss.js';
 import { youtubeTool } from '../tools/youtube.js';
 import { dataAnalysisTool } from '../tools/data-analysis.js';
 import { urlShortener } from '../tools/url-shortener.js';
+import { windowsTool } from '../tools/windows.js';
+import { auditLogger } from '../security/audit.js';
+import { sanitizeLogData } from '../security/encryption.js';
 
 export interface ToolDefinition {
   name: string;
@@ -52,6 +55,31 @@ export interface ToolExecutionResult {
 }
 
 type ToolHandler = (input: Record<string, unknown>) => Promise<unknown>;
+
+function sanitizeToolPayload(payload: unknown): unknown {
+  try {
+    const wrapped = sanitizeLogData({ value: payload } as Record<string, unknown>);
+    return (wrapped as { value?: unknown }).value;
+  } catch {
+    return payload;
+  }
+}
+
+type UserRole = 'ADMIN' | 'USER' | 'GUEST';
+
+const DEFAULT_ROLE_TOOL_PERMISSIONS: Record<UserRole, string[]> = {
+  ADMIN: ['*'],
+  USER: ['browser', 'filesystem', 'memory', 'ai', 'information', 'utility', 'data', 'voice'],
+  GUEST: ['memory', 'information', 'utility'],
+};
+
+function parsePermissionList(value?: string): string[] {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export class ToolRegistry {
   private handlers: Map<string, ToolHandler> = new Map();
@@ -272,6 +300,11 @@ export class ToolRegistry {
       if (!input.url) throw new Error('URL is required');
       return urlShortener.shorten(String(input.url), input.service as string);
     });
+
+    this.registerHandler('builtin:windows_action', async (input) => {
+      if (!input.action) throw new Error('action is required');
+      return windowsTool.execute(input as any);
+    });
   }
 
   async register(tool: ToolDefinition): Promise<void> {
@@ -323,14 +356,39 @@ export class ToolRegistry {
         const cmd = input.input.command as string;
         const dangerous = ['rm', 'mkfs', 'dd', 'chmod', 'chown', 'sudo', 'su'];
         if (dangerous.includes(cmd)) {
-          // In a real system, we would trigger an "Approval Request" here
           throw new Error(`Security Alert: Command '${cmd}' is blocked by default safety policy.`);
         }
       }
 
-      // 2. Future RBAC Extension Point
-      if (input.userId) {
-        // await checkUserPermissions(input.userId, tool.permissions);
+      // 2. RBAC Enforcement
+      const secureMode = process.env.SECURE_MODE === 'true';
+      if (!input.userId) {
+        if (secureMode) {
+          throw new Error('Security Alert: Anonymous tool execution is not allowed in secure mode.');
+        }
+      } else {
+        const user = await db.user.findUnique({ where: { id: input.userId } });
+        if (!user) {
+          throw new Error('Security Alert: User not found for tool execution.');
+        }
+
+        const role = (user.role as UserRole) || 'USER';
+        const envPermissions = parsePermissionList(
+          process.env[`TOOL_PERMISSIONS_${role}`]
+        );
+        const allowedPermissions =
+          envPermissions.length > 0 ? envPermissions : DEFAULT_ROLE_TOOL_PERMISSIONS[role];
+
+        const allowAll = allowedPermissions.includes('*');
+        const hasAllPermissions = tool.permissions.every((perm) =>
+          allowAll ? true : allowedPermissions.includes(perm)
+        );
+
+        if (!hasAllPermissions) {
+          throw new Error(
+            `Security Alert: Role '${role}' lacks permissions for tool '${tool.name}'.`
+          );
+        }
       }
     }
     // --- SECURITY CHECK END ---
@@ -347,26 +405,72 @@ export class ToolRegistry {
 
     const finalHandler = handler || this.handlers.get(tool.name)!;
 
+    const sanitizedInput = sanitizeToolPayload(input.input);
+
     const execution = await db.toolExecution.create({
       data: {
         toolId: tool.id,
-        input: input.input as any,
+        input: sanitizedInput as any,
         status: 'RUNNING',
       },
     });
 
+    const approvalMode = process.env.APPROVAL_MODE || 'off';
+    const requiresApproval =
+      approvalMode === 'strict' &&
+      ['run_shell', 'write_file', 'windows_action'].includes(tool.name);
+
+    if (requiresApproval && !input.input?.approved) {
+      await db.toolExecution.update({
+        where: { id: execution.id },
+        data: {
+          status: 'PENDING_APPROVAL',
+          duration: Date.now() - startTime,
+        },
+      });
+
+      if (input.userId) {
+        await auditLogger.logToolCall(
+          input.userId,
+          String((input.input as any)?.sessionId || 'system'),
+          tool.name,
+          (sanitizedInput || {}) as Record<string, unknown>,
+          'failure'
+        );
+      }
+
+      return {
+        id: execution.id,
+        output: null,
+        status: 'PENDING_APPROVAL',
+        duration: Date.now() - startTime,
+        error: 'Approval required for this tool call',
+      };
+    }
+
     try {
       const output = await finalHandler(input.input);
+      const sanitizedOutput = sanitizeToolPayload(output);
       const duration = Date.now() - startTime;
 
       await db.toolExecution.update({
         where: { id: execution.id },
         data: {
-          output: output as any,
+          output: sanitizedOutput as any,
           status: 'COMPLETED',
           duration,
         },
       });
+
+      if (input.userId) {
+        await auditLogger.logToolCall(
+          input.userId,
+          String((input.input as any)?.sessionId || 'system'),
+          tool.name,
+          (sanitizedInput || {}) as Record<string, unknown>,
+          'success'
+        );
+      }
 
       return {
         id: execution.id,
@@ -386,6 +490,16 @@ export class ToolRegistry {
           duration,
         },
       });
+
+      if (input.userId) {
+        await auditLogger.logToolCall(
+          input.userId,
+          String((input.input as any)?.sessionId || 'system'),
+          tool.name,
+          (sanitizedInput || {}) as Record<string, unknown>,
+          'failure'
+        );
+      }
 
       return {
         id: execution.id,
@@ -492,6 +606,42 @@ export class ToolRegistry {
         handler: 'builtin:run_shell',
         category: 'execution',
         permissions: ['execute'],
+      },
+      {
+        name: 'windows_action',
+        description: 'Perform Windows system actions (processes, apps, clipboard, settings)',
+        schema: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              enum: [
+                'list_processes',
+                'kill_process',
+                'open_app',
+                'open_url',
+                'open_settings',
+                'get_clipboard',
+                'set_clipboard',
+                'list_start_apps',
+              ],
+              description: 'Windows action to perform',
+            },
+            limit: { type: 'number', description: 'Max items to return' },
+            processId: { type: 'number', description: 'Process ID to target' },
+            processName: { type: 'string', description: 'Process name to target' },
+            appPath: { type: 'string', description: 'Full path to application executable' },
+            appName: { type: 'string', description: 'Application name to launch' },
+            args: { type: 'array', items: { type: 'string' }, description: 'Arguments' },
+            url: { type: 'string', description: 'URL to open' },
+            settingsPage: { type: 'string', description: 'Settings page slug' },
+            clipboardText: { type: 'string', description: 'Text to set clipboard to' },
+          },
+          required: ['action'],
+        },
+        handler: 'builtin:windows_action',
+        category: 'windows',
+        permissions: ['windows'],
       },
       {
         name: 'browser_navigate',

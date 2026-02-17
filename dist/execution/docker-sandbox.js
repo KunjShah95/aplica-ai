@@ -40,10 +40,16 @@ export class DockerSandboxExecutor {
                 '--rm', // Auto-remove
                 '-i', // Interactive (stdin)
                 '--network', 'none', // No network
+                '--read-only', // Read-only filesystem
+                '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m',
+                '--pids-limit', '50',
+                '--ipc', 'none',
                 '--memory', this.defaultMemoryLimit,
                 '--cpus', String(this.defaultCpuLimit),
                 '--security-opt', 'no-new-privileges',
                 '--cap-drop', 'ALL', // Drop capabilities
+                '--user', 'node',
+                '--workdir', '/tmp',
                 this.image,
                 'node' // Read from stdin
             ];

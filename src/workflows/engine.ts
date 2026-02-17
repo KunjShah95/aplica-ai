@@ -1,7 +1,8 @@
-import { db } from '../db/index.js';
+import { db, ExecutionStatus } from '../db/index.js';
 import { webhookService } from '../integrations/webhooks.js';
 import { notificationService } from '../notifications/service.js';
 import { toolRegistry } from '../agents/index.js';
+import { memoryManager } from '../memory/index.js';
 import { configLoader } from '../config/loader.js';
 import { createProvider } from '../core/llm/index.js';
 
@@ -15,7 +16,6 @@ export type StepType =
   | 'DELAY'
   | 'NOTIFICATION'
   | 'MEMORY_OPERATION';
-export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface WorkflowDefinition {
   name: string;
@@ -46,6 +46,7 @@ export interface StepDefinition {
 }
 
 export interface ExecutionContext {
+  conversationId?: string | null;
   workflowId: string;
   executionId: string;
   triggerId?: string;
@@ -131,12 +132,80 @@ export class WorkflowEngine {
       const data = this.interpolateObject(step.config.data as Record<string, unknown>, context);
 
       switch (operation) {
-        case 'store':
-          return { stored: true, data };
-        case 'retrieve':
-          return { retrieved: true };
-        case 'search':
-          return { results: [] };
+        case 'store': {
+          if (data.conversationId && Array.isArray(data.messages)) {
+            await memoryManager.saveConversation(
+              String(data.conversationId),
+              String(data.userId || context.variables.userId || 'default'),
+              data.messages as { role: string; content: string }[]
+            );
+            return { stored: true, type: 'conversation' };
+          }
+
+          if (data.title || data.content) {
+            const note = await memoryManager.saveNote({
+              title: String(data.title || 'Untitled'),
+              content: String(data.content || ''),
+              tags: (data.tags as string[]) || [],
+              category: (data.category as string) || 'user',
+            });
+            return { stored: true, type: 'note', note };
+          }
+
+          if (data.logEntry) {
+            const entry = data.logEntry as Record<string, unknown>;
+            const log = await memoryManager.addDailyLog({
+              type: (entry.type as any) || 'note',
+              content: String(entry.content || ''),
+              tags: (entry.tags as string[]) || [],
+            });
+            return { stored: true, type: 'daily_log', log };
+          }
+
+          throw new Error('Unsupported store payload for MEMORY_OPERATION');
+        }
+
+        case 'retrieve': {
+          if (data.noteFileName) {
+            const note = await memoryManager.getNote(String(data.noteFileName));
+            return { retrieved: Boolean(note), note };
+          }
+
+          const userId = String(data.userId || context.variables.userId || 'default');
+          const conversationId = String(data.conversationId || context.conversationId);
+          const maxTokens = Number(data.maxTokens || 2000);
+          const contextText = await memoryManager.getContext(userId, conversationId, maxTokens);
+          return { retrieved: true, context: contextText };
+        }
+
+        case 'search': {
+          if (!data.query) throw new Error('query is required for memory search');
+          const results = await memoryManager.search({
+            query: String(data.query),
+            store: data.store as any,
+            limit: data.limit as number,
+            type: data.type as string,
+            tags: data.tags as string[],
+            userId: data.userId as string,
+          });
+          return { results };
+        }
+
+        case 'remember': {
+          if (!data.query) throw new Error('query is required for memory recall');
+          const memories = await memoryManager.remember(String(data.query), {
+            type: data.type as string,
+            maxResults: data.maxResults as number,
+          });
+          return { memories };
+        }
+
+        case 'forget': {
+          if (!data.id) throw new Error('id is required to forget memory');
+          const deleted = await memoryManager.forget(String(data.id), data.store as any);
+          return { deleted };
+        }
+
         default:
           throw new Error(`Unknown memory operation: ${operation}`);
       }

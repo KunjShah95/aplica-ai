@@ -39,6 +39,10 @@ export declare class ShellTool {
         allowedCommands?: string[];
         blockedCommands?: string[];
     });
+    private executionTimestamps;
+    private readonly RATE_LIMIT_WINDOW;
+    private readonly MAX_COMMANDS_PER_WINDOW;
+    private checkRateLimit;
     execute(command: string, options?: CommandOptions): Promise<CommandResult>;
     executeSync(command: string, options?: CommandOptions): Promise<CommandResult>;
     executeStreaming(command: string, onData?: (data: string, type: 'stdout' | 'stderr') => void, options?: CommandOptions): Promise<StreamingResult>;
@@ -56,5 +60,6 @@ export declare class ShellTool {
     private validateCommand;
     private parseCommand;
     private addToHistory;
+    private getDefaultAllowedCommands;
 }
 //# sourceMappingURL=shell.d.ts.map

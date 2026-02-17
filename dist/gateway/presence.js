@@ -13,6 +13,7 @@ export class PresenceManager extends EventEmitter {
         this.cleanupInterval = setInterval(() => {
             this.pruneInactive();
         }, 60000);
+        this.cleanupInterval.unref();
     }
     async setPresence(userId, status, options) {
         const oldPresence = this.presence.get(userId);

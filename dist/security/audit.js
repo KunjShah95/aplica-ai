@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { sanitizeLogData } from './encryption.js';
 export class AuditLogger {
     directory;
     maxFileSize;
@@ -89,8 +90,6 @@ export class AuditLogger {
         this.rotateFileIfNeeded();
     }
     sanitizeEvent(event) {
-        if (!this.enableEncryption)
-            return event;
         const sanitized = { ...event };
         if (sanitized.parameters) {
             sanitized.parameters = this.sanitizeObject(sanitized.parameters);
@@ -101,19 +100,7 @@ export class AuditLogger {
         return sanitized;
     }
     sanitizeObject(obj) {
-        const result = {};
-        for (const [key, value] of Object.entries(obj)) {
-            if (this.sensitiveFields.has(key.toLowerCase())) {
-                result[key] = '[REDACTED]';
-            }
-            else if (typeof value === 'object' && value !== null) {
-                result[key] = this.sanitizeObject(value);
-            }
-            else {
-                result[key] = value;
-            }
-        }
-        return result;
+        return sanitizeLogData(obj, Array.from(this.sensitiveFields));
     }
     async logCommandExecution(userId, sessionId, command, args, result, output) {
         return this.log({

@@ -8,13 +8,16 @@ export class SandboxExecutor {
     defaultMemoryLimit = 512 * 1024 * 1024;
     defaultCpuLimit = 50;
     useDocker = true;
+    allowInsecureFallback = true;
     dockerExecutor;
     constructor(options = {}) {
         this.options = options;
+        const secureMode = process.env.SECURE_MODE === 'true';
         this.defaultTimeout = options.timeout ?? 30000;
         this.defaultMemoryLimit = options.memoryLimit ?? 512 * 1024 * 1024;
         this.defaultCpuLimit = options.cpuLimit ?? 50;
         this.useDocker = options.useDocker ?? true;
+        this.allowInsecureFallback = options.allowInsecureFallback ?? !secureMode;
         this.dockerExecutor = new DockerSandboxExecutor(options);
     }
     async execute(task) {
@@ -27,9 +30,28 @@ export class SandboxExecutor {
                     return { ...dockerResult, secure: true };
                 }
                 // If docker failed to start (not code error), fallback or error out
+                if (!this.allowInsecureFallback) {
+                    return {
+                        ...dockerResult,
+                        success: false,
+                        error: 'Secure sandbox unavailable; insecure fallback is disabled.',
+                        secure: true,
+                    };
+                }
                 console.warn('Docker sandbox failed to start, falling back to VM isolation (LESS SECURE). Error:', dockerResult.error);
             }
             catch (e) {
+                if (!this.allowInsecureFallback) {
+                    return {
+                        id,
+                        success: false,
+                        output: '',
+                        error: 'Secure sandbox unavailable; insecure fallback is disabled.',
+                        executionTime: Date.now() - startTime,
+                        timestamp: new Date(),
+                        secure: true,
+                    };
+                }
                 console.warn('Docker sandbox exception, falling back to VM isolation (LESS SECURE).', e);
             }
         }
@@ -152,20 +174,14 @@ export class SandboxExecutor {
             Promise: Promise,
             ...input,
         };
-        const contextKeys = Object.keys(context);
-        const contextValues = Object.values(context);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const contextEntries = contextKeys.map((key, index) => `${key} = args[${index}]`).join(', ');
-        const wrappedCode = `
-      (function(args) {
-        'use strict';
-        const { ${contextKeys.join(', ')} } = args;
-        ${code}
-      })
-    `;
-        // eslint-disable-next-line no-eval
-        const fn = eval(wrappedCode);
-        return fn(contextValues);
+        // Use vm.runInNewContext which provides a sandboxed environment
+        // We wrap code in an IIFE to allow 'return' statements
+        const wrappedCode = `(function() {
+      'use strict';
+      ${code}
+    })()`;
+        const vm = require('vm');
+        return vm.runInNewContext(wrappedCode, context);
     }
     async executeJavaScript(code, input) {
         return this.execute({

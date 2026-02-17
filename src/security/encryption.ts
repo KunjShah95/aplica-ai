@@ -180,15 +180,56 @@ export function sanitizeLogData<T extends Record<string, unknown>>(
 
     for (const key of Object.keys(result)) {
         const lowerKey = key.toLowerCase();
+        const value = result[key];
 
         if (sensitiveKeys.some(sk => lowerKey.includes(sk.toLowerCase()))) {
             (result as any)[key] = '[REDACTED]';
-        } else if (typeof result[key] === 'object' && result[key] !== null) {
+            continue;
+        }
+
+        if (typeof value === 'string') {
+            (result as any)[key] = redactSensitiveText(value);
+            continue;
+        }
+
+        if (Array.isArray(value)) {
+            (result as any)[key] = value.map((item) => {
+                if (typeof item === 'string') return redactSensitiveText(item);
+                if (item && typeof item === 'object') {
+                    return sanitizeLogData(item as Record<string, unknown>, sensitiveKeys);
+                }
+                return item;
+            });
+            continue;
+        }
+
+        if (typeof value === 'object' && value !== null) {
             (result as any)[key] = sanitizeLogData(
-                result[key] as Record<string, unknown>,
+                value as Record<string, unknown>,
                 sensitiveKeys
             );
         }
+    }
+
+    return result;
+}
+
+export function redactSensitiveText(text: string): string {
+    let result = text;
+
+    const patterns: Array<{ label: string; regex: RegExp }> = [
+        { label: 'OPENAI', regex: /\bsk-[A-Za-z0-9]{20,}\b/g },
+        { label: 'ANTHROPIC', regex: /\bsk-ant-[A-Za-z0-9]{20,}\b/gi },
+        { label: 'SLACK', regex: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
+        { label: 'GITHUB', regex: /\bgh[ps]_[A-Za-z0-9]{20,}\b/g },
+        { label: 'GOOGLE', regex: /\bAIza[0-9A-Za-z\-_]{20,}\b/g },
+        { label: 'AWS', regex: /\bAKIA[0-9A-Z]{16}\b/g },
+        { label: 'JWT', regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g },
+        { label: 'PRIVATE_KEY', regex: /-----BEGIN (?:RSA|EC|DSA|OPENSSH) PRIVATE KEY-----[\s\S]*?-----END (?:RSA|EC|DSA|OPENSSH) PRIVATE KEY-----/g },
+    ];
+
+    for (const { label, regex } of patterns) {
+        result = result.replace(regex, `[REDACTED_${label}]`);
     }
 
     return result;

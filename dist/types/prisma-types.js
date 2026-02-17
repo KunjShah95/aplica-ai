@@ -16,6 +16,7 @@ export var TeamRole;
     TeamRole["ADMIN"] = "ADMIN";
     TeamRole["MEMBER"] = "MEMBER";
     TeamRole["VIEWER"] = "VIEWER";
+    TeamRole["AI_AGENT"] = "AI_AGENT";
 })(TeamRole || (TeamRole = {}));
 export var MessageRole;
 (function (MessageRole) {

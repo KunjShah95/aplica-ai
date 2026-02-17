@@ -1,6 +1,7 @@
 # Alpicia REST API Documentation
 
 ## Base URL
+
 ```
 http://localhost:3000/api
 ```
@@ -8,6 +9,7 @@ http://localhost:3000/api
 ## Authentication
 
 All authenticated endpoints require either:
+
 - **Bearer Token**: `Authorization: Bearer <access_token>`
 - **API Key**: `Authorization: Bearer sk_<api_key>`
 
@@ -16,6 +18,7 @@ All authenticated endpoints require either:
 ## Auth Endpoints
 
 ### Register User
+
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -29,6 +32,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "user": {
@@ -47,6 +51,7 @@ Content-Type: application/json
 ```
 
 ### Login
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
@@ -58,12 +63,14 @@ Content-Type: application/json
 ```
 
 ### Logout
+
 ```http
 POST /api/auth/logout
 Authorization: Bearer <token>
 ```
 
 ### Refresh Token
+
 ```http
 POST /api/auth/refresh
 Content-Type: application/json
@@ -74,12 +81,14 @@ Content-Type: application/json
 ```
 
 ### Get Current User
+
 ```http
 GET /api/auth/me
 Authorization: Bearer <token>
 ```
 
 ### Update Profile
+
 ```http
 PUT /api/auth/me
 Authorization: Bearer <token>
@@ -92,6 +101,7 @@ Content-Type: application/json
 ```
 
 ### Change Password
+
 ```http
 POST /api/auth/change-password
 Authorization: Bearer <token>
@@ -108,12 +118,14 @@ Content-Type: application/json
 ## API Keys
 
 ### List API Keys
+
 ```http
 GET /api/auth/api-keys
 Authorization: Bearer <token>
 ```
 
 ### Create API Key
+
 ```http
 POST /api/auth/api-keys
 Authorization: Bearer <token>
@@ -127,6 +139,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "apiKey": {
@@ -140,6 +153,7 @@ Content-Type: application/json
 ```
 
 ### Revoke API Key
+
 ```http
 DELETE /api/auth/api-keys/:id
 Authorization: Bearer <token>
@@ -150,12 +164,14 @@ Authorization: Bearer <token>
 ## Conversations
 
 ### List Conversations
+
 ```http
 GET /api/conversations?limit=20&offset=0&workspaceId=<workspace_id>
 Authorization: Bearer <token>
 ```
 
 ### Create Conversation
+
 ```http
 POST /api/conversations
 Authorization: Bearer <token>
@@ -169,18 +185,21 @@ Content-Type: application/json
 ```
 
 ### Get Conversation
+
 ```http
 GET /api/conversations/:id
 Authorization: Bearer <token>
 ```
 
 ### Delete Conversation
+
 ```http
 DELETE /api/conversations/:id
 Authorization: Bearer <token>
 ```
 
 ### Add Message
+
 ```http
 POST /api/conversations/:id/messages
 Authorization: Bearer <token>
@@ -194,6 +213,7 @@ Content-Type: application/json
 ```
 
 ### Share Conversation
+
 ```http
 POST /api/conversations/:id/share
 Authorization: Bearer <token>
@@ -205,6 +225,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "share": {
@@ -215,9 +236,11 @@ Content-Type: application/json
 ```
 
 ### Get Shared Conversation
+
 ```http
 GET /api/shared/:token
 ```
+
 *No authentication required*
 
 ---
@@ -225,17 +248,20 @@ GET /api/shared/:token
 ## Memory
 
 ### Search Memories
+
 ```http
 GET /api/memory?q=search+query&type=FACT&limit=10
 Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `q` - Search query (optional)
 - `type` - Memory type: FACT, PREFERENCE, EXPERIENCE, SKILL, RELATIONSHIP, CONTEXT
 - `limit` - Max results (default: 10)
 
 ### Add Memory
+
 ```http
 POST /api/memory
 Authorization: Bearer <token>
@@ -253,12 +279,14 @@ Content-Type: application/json
 ```
 
 ### Get Memory
+
 ```http
 GET /api/memory/:id
 Authorization: Bearer <token>
 ```
 
 ### Update Memory
+
 ```http
 PUT /api/memory/:id
 Authorization: Bearer <token>
@@ -271,6 +299,7 @@ Content-Type: application/json
 ```
 
 ### Delete Memory
+
 ```http
 DELETE /api/memory/:id
 Authorization: Bearer <token>
@@ -281,12 +310,14 @@ Authorization: Bearer <token>
 ## Knowledge Bases
 
 ### List Knowledge Bases
+
 ```http
 GET /api/knowledge-bases?workspaceId=<workspace_id>
 Authorization: Bearer <token>
 ```
 
 ### Create Knowledge Base
+
 ```http
 POST /api/knowledge-bases
 Authorization: Bearer <token>
@@ -300,18 +331,21 @@ Content-Type: application/json
 ```
 
 ### Get Knowledge Base
+
 ```http
 GET /api/knowledge-bases/:id
 Authorization: Bearer <token>
 ```
 
 ### Delete Knowledge Base
+
 ```http
 DELETE /api/knowledge-bases/:id
 Authorization: Bearer <token>
 ```
 
 ### Add Document
+
 ```http
 POST /api/knowledge-bases/:id/documents
 Authorization: Bearer <token>
@@ -326,6 +360,7 @@ Content-Type: application/json
 ```
 
 ### Search Knowledge Base
+
 ```http
 POST /api/knowledge-bases/:id/search
 Authorization: Bearer <token>
@@ -338,6 +373,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -358,12 +394,14 @@ Content-Type: application/json
 ## Teams
 
 ### List User Teams
+
 ```http
 GET /api/teams
 Authorization: Bearer <token>
 ```
 
 ### Create Team
+
 ```http
 POST /api/teams
 Authorization: Bearer <token>
@@ -377,12 +415,14 @@ Content-Type: application/json
 ```
 
 ### Get Team
+
 ```http
 GET /api/teams/:id
 Authorization: Bearer <token>
 ```
 
 ### Update Team
+
 ```http
 PUT /api/teams/:id
 Authorization: Bearer <token>
@@ -395,12 +435,14 @@ Content-Type: application/json
 ```
 
 ### Delete Team
+
 ```http
 DELETE /api/teams/:id
 Authorization: Bearer <token>
 ```
 
 ### Invite Member
+
 ```http
 POST /api/teams/:id/members
 Authorization: Bearer <token>
@@ -415,6 +457,7 @@ Content-Type: application/json
 **Roles:** `OWNER`, `ADMIN`, `MEMBER`, `VIEWER`
 
 ### Remove Member
+
 ```http
 DELETE /api/teams/:id/members/:userId
 Authorization: Bearer <token>
@@ -425,12 +468,14 @@ Authorization: Bearer <token>
 ## Workspaces
 
 ### List Workspaces
+
 ```http
 GET /api/teams/:teamId/workspaces
 Authorization: Bearer <token>
 ```
 
 ### Create Workspace
+
 ```http
 POST /api/teams/:teamId/workspaces
 Authorization: Bearer <token>
@@ -443,12 +488,14 @@ Content-Type: application/json
 ```
 
 ### Get Workspace
+
 ```http
 GET /api/workspaces/:id
 Authorization: Bearer <token>
 ```
 
 ### Update Workspace
+
 ```http
 PUT /api/workspaces/:id
 Authorization: Bearer <token>
@@ -463,6 +510,7 @@ Content-Type: application/json
 ```
 
 ### Delete Workspace
+
 ```http
 DELETE /api/workspaces/:id
 Authorization: Bearer <token>
@@ -473,12 +521,14 @@ Authorization: Bearer <token>
 ## Analytics
 
 ### Get Dashboard
+
 ```http
 GET /api/analytics/dashboard
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "today": {
@@ -495,12 +545,14 @@ Authorization: Bearer <token>
 ```
 
 ### Get Usage
+
 ```http
 GET /api/analytics/usage?startDate=2024-01-01&endDate=2024-01-31
 Authorization: Bearer <token>
 ```
 
 ### Get Audit Logs
+
 ```http
 GET /api/analytics/audit-logs?limit=50&offset=0
 Authorization: Bearer <token>
@@ -511,11 +563,13 @@ Authorization: Bearer <token>
 ## Health Check
 
 ### Health Status
+
 ```http
 GET /api/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -529,6 +583,7 @@ GET /api/health
 ## Error Responses
 
 All errors follow this format:
+
 ```json
 {
   "error": "Error message description"
@@ -536,6 +591,7 @@ All errors follow this format:
 ```
 
 ### Common Status Codes
+
 | Code | Description |
 |------|-------------|
 | 200 | Success |
@@ -548,6 +604,7 @@ All errors follow this format:
 | 500 | Internal Server Error |
 
 ### Rate Limiting Headers
+
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -561,7 +618,9 @@ X-RateLimit-Reset: 1705312200
 Connect to: `ws://localhost:3001`
 
 ### Authentication
+
 Send authentication message after connecting:
+
 ```json
 {
   "type": "auth",
@@ -570,6 +629,7 @@ Send authentication message after connecting:
 ```
 
 ### Send Message
+
 ```json
 {
   "type": "message",
@@ -579,6 +639,7 @@ Send authentication message after connecting:
 ```
 
 ### Receive Message
+
 ```json
 {
   "type": "message",
@@ -593,6 +654,7 @@ Send authentication message after connecting:
 ```
 
 ### Streaming Response
+
 ```json
 {
   "type": "stream",
@@ -607,6 +669,7 @@ Send authentication message after connecting:
 ## SDK Examples
 
 ### JavaScript/TypeScript
+
 ```typescript
 const response = await fetch('http://localhost:3000/api/conversations', {
   method: 'POST',
@@ -623,6 +686,7 @@ const { conversation } = await response.json();
 ```
 
 ### Python
+
 ```python
 import requests
 
@@ -636,6 +700,7 @@ conversation = response.json()['conversation']
 ```
 
 ### cURL
+
 ```bash
 curl -X POST http://localhost:3000/api/conversations \
   -H "Authorization: Bearer $TOKEN" \

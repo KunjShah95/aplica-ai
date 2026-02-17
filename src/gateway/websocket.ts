@@ -2,11 +2,16 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Agent } from '../core/agent.js';
 import { MessageRouter } from './router.js';
 import { randomUUID } from 'crypto';
+import { promptGuard } from '../security/prompt-guard.js';
+import { RateLimiter } from '../security/rate-limit.js';
+import { authService, AuthUser } from '../auth/index.js';
+import { approvalEvents, ApprovalEvent } from '../core/security/approval.js';
 
 export interface WSClient {
   id: string;
   ws: WebSocket;
   userId: string;
+  role?: AuthUser['role'];
   connectedAt: Date;
   lastActivity: Date;
 }
@@ -39,13 +44,21 @@ export class WebSocketGateway {
   private router: MessageRouter;
   private clients: Map<string, WSClient> = new Map();
   private userSessions: Map<string, string> = new Map();
+  private rateLimiter: RateLimiter;
   private port: number;
   private pingInterval: NodeJS.Timeout | null = null;
+  private approvalHandlers?: {
+    pending: (event: ApprovalEvent) => void;
+    decision: (event: ApprovalEvent) => void;
+  };
 
   constructor(agent: Agent, router: MessageRouter, options: { port?: number } = {}) {
     this.agent = agent;
     this.router = router;
     this.port = options.port || 3001;
+    const windowMs = parseInt(process.env.WS_RATE_LIMIT_WINDOW || '60000');
+    const maxRequests = parseInt(process.env.WS_RATE_LIMIT_MAX || '60');
+    this.rateLimiter = new RateLimiter({ windowMs, maxRequests, keyGenerator: (id) => `ws:${id}` });
   }
 
   async start(): Promise<void> {
@@ -56,6 +69,7 @@ export class WebSocketGateway {
     });
 
     this.startPingInterval();
+    this.registerApprovalListeners();
 
     console.log(`🔌 WebSocket Gateway listening on port ${this.port}`);
   }
@@ -101,6 +115,17 @@ export class WebSocketGateway {
     client.lastActivity = new Date();
 
     try {
+      if (data.length > 50000) {
+        this.sendError(clientId, 'Payload too large');
+        return;
+      }
+
+      const rate = this.rateLimiter.check(client.userId || clientId);
+      if (!rate.allowed) {
+        this.sendError(clientId, `Rate limit exceeded. Retry after ${rate.retryAfter}s.`);
+        return;
+      }
+
       const message: WSMessage = JSON.parse(data);
 
       switch (message.type) {
@@ -109,6 +134,10 @@ export class WebSocketGateway {
           break;
 
         case 'message':
+          if (process.env.SECURE_MODE === 'true' && client.userId === 'anonymous') {
+            this.sendError(clientId, 'Authentication required');
+            return;
+          }
           await this.handleChatMessage(clientId, message.payload);
           break;
 
@@ -141,19 +170,36 @@ export class WebSocketGateway {
     const client = this.clients.get(clientId);
     if (!client) return;
 
-    const data = payload as { userId: string };
-    if (data?.userId) {
-      client.userId = data.userId;
-      this.userSessions.set(data.userId, clientId);
+    const data = payload as { token?: string; apiKey?: string; userId?: string };
+    let user: AuthUser | null = null;
 
-      this.send(clientId, {
-        type: 'auth',
-        payload: { success: true, userId: data.userId },
-        timestamp: new Date(),
-      });
-
-      console.log(`🔐 Client ${clientId} authenticated as ${data.userId}`);
+    if (data?.token) {
+      user = await authService.validateToken(data.token);
+    } else if (data?.apiKey) {
+      const result = await authService.validateApiKey(data.apiKey);
+      if (result) {
+        user = await authService.getUser(result.userId);
+      }
+    } else if (data?.userId && process.env.SECURE_MODE !== 'true') {
+      user = await authService.getUser(data.userId);
     }
+
+    if (!user) {
+      this.sendError(clientId, 'Authentication failed');
+      return;
+    }
+
+    client.userId = user.id;
+    client.role = user.role;
+    this.userSessions.set(user.id, clientId);
+
+    this.send(clientId, {
+      type: 'auth',
+      payload: { success: true, userId: user.id, role: user.role },
+      timestamp: new Date(),
+    });
+
+    console.log(`🔐 Client ${clientId} authenticated as ${user.id}`);
   }
 
   private async handleChatMessage(clientId: string, payload: unknown): Promise<void> {
@@ -170,10 +216,22 @@ export class WebSocketGateway {
       return;
     }
 
+    const safeContent = promptGuard.sanitize(String(data.content));
+    const guardResult = promptGuard.validate(safeContent);
+    if (!guardResult.valid) {
+      this.sendError(clientId, guardResult.reason || 'Message blocked by safety policy');
+      return;
+    }
+
+    if (safeContent.length > 10000) {
+      this.sendError(clientId, 'Message exceeds maximum length');
+      return;
+    }
+
     try {
       const response = await this.router.handleFromWebSocket(
         client.userId,
-        data.content,
+        safeContent,
         data.conversationId
       );
 
@@ -231,6 +289,38 @@ export class WebSocketGateway {
       this.userSessions.delete(client.userId);
       this.clients.delete(clientId);
       console.log(`🔌 Client disconnected: ${clientId}`);
+    }
+  }
+
+  private registerApprovalListeners(): void {
+    if (this.approvalHandlers) return;
+
+    const pendingHandler = (event: ApprovalEvent) => {
+      this.broadcastToAdmins({
+        type: 'broadcast',
+        payload: { type: 'approval_pending', approval: event.request },
+        timestamp: new Date(),
+      });
+    };
+
+    const decisionHandler = (event: ApprovalEvent) => {
+      this.broadcastToAdmins({
+        type: 'broadcast',
+        payload: { type: 'approval_decision', approval: event.request },
+        timestamp: new Date(),
+      });
+    };
+
+    this.approvalHandlers = { pending: pendingHandler, decision: decisionHandler };
+    approvalEvents.on('pending', pendingHandler);
+    approvalEvents.on('decision', decisionHandler);
+  }
+
+  private broadcastToAdmins(response: WSResponse): void {
+    for (const client of this.clients.values()) {
+      if (client.role === 'ADMIN' && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(response));
+      }
     }
   }
 
@@ -296,6 +386,12 @@ export class WebSocketGateway {
   async stop(): Promise<void> {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
+    }
+
+    if (this.approvalHandlers) {
+      approvalEvents.off('pending', this.approvalHandlers.pending);
+      approvalEvents.off('decision', this.approvalHandlers.decision);
+      this.approvalHandlers = undefined;
     }
 
     for (const client of this.clients.values()) {

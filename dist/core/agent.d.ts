@@ -5,6 +5,8 @@ import { executionContext } from '../execution/index.js';
 export interface AgentOptions {
     config: AppConfig;
     llm: LLMProvider;
+    workspaceId?: string;
+    userId?: string;
 }
 export interface AgentResponse {
     message: string;
@@ -21,11 +23,14 @@ export declare class Agent {
     private config;
     private llm;
     private systemPrompt;
+    private workspaceId?;
+    private userId?;
     constructor(options: AgentOptions);
+    private setupWorkspaceContext;
     private buildSystemPrompt;
-    processMessage(content: string, conversationId: string, userId: string, source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack'): Promise<AgentResponse>;
+    processMessage(content: string, conversationId: string, userId: string, source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp'): Promise<AgentResponse>;
     private buildMessages;
-    startConversation(userId: string, platform: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack', initialMessage?: string): Promise<{
+    startConversation(userId: string, platform: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp', initialMessage?: string): Promise<{
         conversationId: string;
         response?: AgentResponse;
     }>;

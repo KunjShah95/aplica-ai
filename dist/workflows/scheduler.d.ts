@@ -20,6 +20,7 @@ export interface CreateTaskInput {
 export declare class Scheduler {
     private timers;
     private running;
+    private pollTimeout?;
     start(): Promise<void>;
     stop(): void;
     createTask(input: CreateTaskInput): Promise<string>;
@@ -44,10 +45,10 @@ export declare class Scheduler {
             runs: number;
         };
     } & {
+        type: import(".prisma/client").$Enums.TaskType;
         name: string;
         description: string | null;
         id: string;
-        type: import(".prisma/client").$Enums.TaskType;
         payload: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         maxRetries: number;
@@ -62,9 +63,9 @@ export declare class Scheduler {
         nextRunAt: Date | null;
     })[]>;
     getTaskRuns(taskId: string, limit?: number): Promise<{
-        id: string;
-        status: import(".prisma/client").$Enums.ExecutionStatus;
         error: string | null;
+        status: import(".prisma/client").$Enums.ExecutionStatus;
+        id: string;
         duration: number | null;
         output: import("@prisma/client/runtime/library").JsonValue | null;
         taskId: string;

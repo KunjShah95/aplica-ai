@@ -50,10 +50,10 @@ export declare class KnowledgeBaseService {
         workspaceId: string;
     })[]>;
     addDocument(input: AddDocumentInput): Promise<{
+        status: import(".prisma/client").$Enums.DocumentStatus;
         id: string;
         content: string;
         source: string | null;
-        status: import(".prisma/client").$Enums.DocumentStatus;
         createdAt: Date;
         title: string;
         updatedAt: Date;

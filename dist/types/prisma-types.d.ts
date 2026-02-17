@@ -12,7 +12,8 @@ export declare enum TeamRole {
     OWNER = "OWNER",
     ADMIN = "ADMIN",
     MEMBER = "MEMBER",
-    VIEWER = "VIEWER"
+    VIEWER = "VIEWER",
+    AI_AGENT = "AI_AGENT"
 }
 export declare enum MessageRole {
     USER = "USER",

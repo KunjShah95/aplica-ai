@@ -30,6 +30,7 @@ export interface UserContext {
     preferences: Record<string, unknown>;
     permissions: string[];
     memoryEnabled: boolean;
+    role?: string;
 }
 export interface AppConfig {
     soul: SoulConfig;
@@ -41,12 +42,13 @@ export interface AppConfig {
     security: SecurityConfig;
 }
 export interface LLMConfig {
-    provider: 'claude' | 'openai' | 'ollama';
+    provider: 'claude' | 'openai' | 'ollama' | 'groq' | 'custom';
     apiKey?: string;
     model: string;
     maxTokens: number;
     temperature: number;
     systemPrompt?: string;
+    baseURL?: string;
 }
 export interface MessagingConfig {
     telegram?: {

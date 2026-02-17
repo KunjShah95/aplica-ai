@@ -8,6 +8,8 @@ export interface AgentConfig {
   capabilities: string[];
   maxTasks?: number;
   priority?: number;
+  model?: string;
+  systemPrompt?: string;
 }
 
 export interface Task {
@@ -41,11 +43,19 @@ export interface SwarmStats {
   avgResponseTime: number;
 }
 
+export interface SwarmConfig {
+  name: string;
+  workflow: 'sequential' | 'parallel' | 'hierarchical';
+  maxConcurrency?: number;
+  maxRetries?: number;
+}
+
 export class AgentSwarm extends EventEmitter {
   private agents: Map<string, AgentConfig> = new Map();
   private tasks: Map<string, Task> = new Map();
   private messageQueue: AgentMessage[] = [];
   private coordinator: string | null = null;
+  private config: SwarmConfig;
   private stats: {
     totalTasks: number;
     completedTasks: number;
@@ -53,14 +63,24 @@ export class AgentSwarm extends EventEmitter {
     responseTimes: number[];
   };
 
-  constructor() {
+  constructor(config?: Partial<SwarmConfig>) {
     super();
+    this.config = {
+      name: config?.name || 'default',
+      workflow: config?.workflow || 'sequential',
+      maxConcurrency: config?.maxConcurrency || 5,
+      maxRetries: config?.maxRetries || 3,
+    };
     this.stats = {
       totalTasks: 0,
       completedTasks: 0,
       failedTasks: 0,
       responseTimes: [],
     };
+  }
+
+  setConfig(config: Partial<SwarmConfig>): void {
+    this.config = { ...this.config, ...config };
   }
 
   registerAgent(config: AgentConfig): void {
@@ -114,39 +134,87 @@ export class AgentSwarm extends EventEmitter {
     console.log(`Task submitted: ${newTask.type} (priority: ${newTask.priority})`);
     this.emit('task:submitted', newTask);
 
-    await this.dispatchTask(newTask.id);
+    if (this.config.workflow === 'parallel') {
+      await this.dispatchTaskParallel(newTask.id);
+    } else if (this.config.workflow === 'hierarchical') {
+      await this.dispatchTaskHierarchical(newTask.id);
+    } else {
+      await this.dispatchTaskSequential(newTask.id);
+    }
+
     return newTask;
   }
 
-  private async dispatchTask(taskId: string): Promise<void> {
+  private async dispatchTaskSequential(taskId: string): Promise<void> {
     const task = this.tasks.get(taskId);
     if (!task || task.status !== 'pending') return;
 
-    const eligibleAgents = Array.from(this.agents.values())
-      .filter((agent) => {
-        if (!agent.capabilities.includes(task.type)) return false;
-        if (agent.maxTasks && this.getAgentTaskCount(agent.id) >= agent.maxTasks) return false;
-        return true;
-      })
-      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
-
+    const eligibleAgents = this.getEligibleAgents(task.type);
     if (eligibleAgents.length === 0) {
       console.warn(`No eligible agents for task: ${task.type}`);
       return;
     }
 
     const selectedAgent = eligibleAgents[0];
-    task.assignedTo = selectedAgent.id;
+    await this.assignTaskToAgent(task, selectedAgent);
+  }
+
+  private async dispatchTaskParallel(taskId: string): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task || task.status !== 'pending') return;
+
+    const eligibleAgents = this.getEligibleAgents(task.type);
+    if (eligibleAgents.length === 0) {
+      console.warn(`No eligible agents for task: ${task.type}`);
+      return;
+    }
+
+    const availableSlots = this.config.maxConcurrency || 5;
+    const agentsToAssign = eligibleAgents.slice(0, Math.min(availableSlots, eligibleAgents.length));
+
+    await Promise.all(
+      agentsToAssign.map((agent) => this.assignTaskToAgent({ ...task, id: randomUUID() }, agent))
+    );
+  }
+
+  private async dispatchTaskHierarchical(taskId: string): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task || task.status !== 'pending') return;
+
+    if (this.coordinator) {
+      const coordinatorAgent = this.agents.get(this.coordinator);
+      if (coordinatorAgent) {
+        await this.assignTaskToAgent(task, coordinatorAgent);
+        return;
+      }
+    }
+
+    await this.dispatchTaskSequential(taskId);
+  }
+
+  private getEligibleAgents(taskType: string): AgentConfig[] {
+    return Array.from(this.agents.values())
+      .filter((agent) => {
+        if (!agent.capabilities.includes(taskType) && !agent.capabilities.includes('*'))
+          return false;
+        if (agent.maxTasks && this.getAgentTaskCount(agent.id) >= agent.maxTasks) return false;
+        return true;
+      })
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  }
+
+  private async assignTaskToAgent(task: Task, agent: AgentConfig): Promise<void> {
+    task.assignedTo = agent.id;
     task.status = 'assigned';
     task.updatedAt = new Date();
 
-    console.log(`Task ${taskId} assigned to ${selectedAgent.name}`);
-    this.emit('task:assigned', { task, agent: selectedAgent });
+    console.log(`Task ${task.id} assigned to ${agent.name}`);
+    this.emit('task:assigned', { task, agent });
 
     await this.sendMessage({
       id: randomUUID(),
       from: 'system',
-      to: selectedAgent.id,
+      to: agent.id,
       type: 'task',
       payload: task,
       timestamp: new Date(),
@@ -212,7 +280,13 @@ export class AgentSwarm extends EventEmitter {
         });
 
         if (allDepsMet) {
-          await this.dispatchTask(taskId);
+          if (this.config.workflow === 'parallel') {
+            await this.dispatchTaskParallel(taskId);
+          } else if (this.config.workflow === 'hierarchical') {
+            await this.dispatchTaskHierarchical(taskId);
+          } else {
+            await this.dispatchTaskSequential(taskId);
+          }
         }
       }
     }
@@ -306,20 +380,105 @@ export class AgentSwarm extends EventEmitter {
   ): Promise<string[]> {
     const taskIds: string[] = [];
 
-    for (const step of steps) {
-      const task = await this.submitTask({
-        type: step.type,
-        payload: step.payload,
-        dependencies: step.dependsOn,
-        priority: 1,
-      });
-      taskIds.push(task.id);
+    if (this.config.workflow === 'parallel') {
+      const parallelSteps = steps.filter((s) => !s.dependsOn || s.dependsOn.length === 0);
+      const results = await Promise.all(
+        parallelSteps.map((step) =>
+          this.submitTask({
+            type: step.type,
+            payload: step.payload,
+            dependencies: step.dependsOn,
+            priority: 1,
+          })
+        )
+      );
+      taskIds.push(...results.map((r) => r.id));
+    } else {
+      for (const step of steps) {
+        const task = await this.submitTask({
+          type: step.type,
+          payload: step.payload,
+          dependencies: step.dependsOn,
+          priority: 1,
+        });
+        taskIds.push(task.id);
+      }
     }
 
     console.log(`Workflow "${name}" created with ${taskIds.length} tasks`);
     this.emit('workflow:created', { name, taskIds });
     return taskIds;
   }
+
+  clear(): void {
+    this.tasks.clear();
+    this.messageQueue = [];
+    this.stats = {
+      totalTasks: 0,
+      completedTasks: 0,
+      failedTasks: 0,
+      responseTimes: [],
+    };
+    console.log('Swarm cleared');
+  }
+}
+
+export class SwarmOrchestrator {
+  private swarms: Map<string, AgentSwarm> = new Map();
+  private defaultSwarm: AgentSwarm;
+
+  constructor() {
+    this.defaultSwarm = new AgentSwarm();
+    this.swarms.set('default', this.defaultSwarm);
+  }
+
+  createSwarm(name: string, config?: Partial<SwarmConfig>): AgentSwarm {
+    const swarm = new AgentSwarm(config);
+    swarm.setConfig({ name });
+    this.swarms.set(name, swarm);
+    console.log(`Created swarm: ${name}`);
+    return swarm;
+  }
+
+  getSwarm(name: string = 'default'): AgentSwarm {
+    return this.swarms.get(name) || this.defaultSwarm;
+  }
+
+  deleteSwarm(name: string): boolean {
+    if (name === 'default') return false;
+    return this.swarms.delete(name);
+  }
+
+  getAllSwarms(): string[] {
+    return Array.from(this.swarms.keys());
+  }
+
+  async executeMultiSwarmTask(
+    task: Omit<Task, 'id' | 'status' | 'createdAt' | 'updatedAt'>,
+    swarmNames?: string[]
+  ): Promise<Map<string, Task>> {
+    const results = new Map<string, Task>();
+    const swarmsToUse = swarmNames
+      ? (swarmNames.map((n) => this.swarms.get(n)).filter(Boolean) as AgentSwarm[])
+      : Array.from(this.swarms.values());
+
+    const taskPromises = swarmsToUse.map(async (swarm) => {
+      const result = await swarm.submitTask(task);
+      results.set((swarm as any).config?.name || 'default', result);
+    });
+
+    await Promise.all(taskPromises);
+    return results;
+  }
+
+  getGlobalStats(): Record<string, SwarmStats> {
+    const stats: Record<string, SwarmStats> = {};
+    for (const [name, swarm] of this.swarms) {
+      stats[name] = swarm.getStats();
+    }
+    return stats;
+  }
 }
 
 export const agentSwarm = new AgentSwarm();
+export const swarmOrchestrator = new SwarmOrchestrator();
