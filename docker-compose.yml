@@ -9,7 +9,6 @@ services:
     restart: unless-stopped
     ports:
       - '3000:3000'
-      - '3001:3001'
       - '3002:3002'
     environment:
       - DATABASE_URL=postgresql://alpicia:password@postgres:5432/alpicia
@@ -35,7 +34,7 @@ services:
     container_name: alpicia-dashboard
     restart: unless-stopped
     ports:
-      - '80:80'
+      - '3001:8080'
     depends_on:
       - alpicia
     networks:

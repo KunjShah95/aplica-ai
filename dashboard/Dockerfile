@@ -1,19 +1,18 @@
-FROM node:20-alpine AS builder
+FROM cgr.dev/chainguard/node:latest-dev AS builder
 
 WORKDIR /app
 
-COPY dashboard/package*.json ./dashboard/
-WORKDIR /app/dashboard
+COPY package*.json ./
 RUN npm ci
 
-COPY dashboard/ ./
+COPY . ./
 RUN npm run build
 
-FROM nginx:alpine
+FROM cgr.dev/chainguard/nginx:latest
 
-COPY --from=builder /app/dashboard/dist /usr/share/nginx/html
-COPY dashboard/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
