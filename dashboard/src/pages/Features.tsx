@@ -3,6 +3,7 @@ import {
   Brain,
   Zap,
   Globe,
+  Mail,
   Shield,
   MessageSquare,
   Bot,
