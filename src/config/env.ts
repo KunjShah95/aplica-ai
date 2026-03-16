@@ -44,7 +44,7 @@ export const envSchema = z.object({
   OPENAI_API_ENABLED: z.coerce.boolean().default(true),
   OPENAI_API_PORT: z.coerce.number().min(1024).max(65535).default(3002),
 
-  MEMORY_TYPE: z.enum(['jsonl', 'sqlite', 'postgres']).default('postgres'),
+  MEMORY_TYPE: z.enum(['jsonl', 'postgres']).default('postgres'),
   MEMORY_PATH: z.string().default('./memory'),
   MEMORY_MAX_ENTRIES: z.coerce.number().min(1).default(10000),
   MEMORY_SEARCH: z.coerce.boolean().default(true),
@@ -98,6 +98,17 @@ export const envSchema = z.object({
 
   METRICS_ENABLED: z.coerce.boolean().default(true),
   METRICS_PORT: z.coerce.number().min(1024).max(65535).default(9090),
+
+  MODEL_ROUTER_ENABLED: z.coerce.boolean().default(true),
+  MODEL_ROUTER_SIMPLE_MAX_CHARS: z.coerce.number().min(1).default(240),
+  MODEL_ROUTER_COMPLEX_MIN_CHARS: z.coerce.number().min(1).default(1200),
+  MODEL_ROUTER_SIMPLE_MODEL: z.string().optional(),
+  MODEL_ROUTER_MEDIUM_MODEL: z.string().optional(),
+  MODEL_ROUTER_COMPLEX_MODEL: z.string().optional(),
+
+  BUDGET_GOVERNOR_ENABLED: z.coerce.boolean().default(true),
+  BUDGET_DAILY_USER_USD: z.coerce.number().min(0).default(2),
+  BUDGET_DAILY_GLOBAL_USD: z.coerce.number().min(0).default(200),
 
   SENTRY_DSN: z.string().url().optional(),
 

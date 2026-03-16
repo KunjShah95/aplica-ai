@@ -10,6 +10,7 @@ export interface LLMCompletionOptions {
     temperature?: number;
     systemPrompt?: string;
     tools?: string[];
+    model?: string;
 }
 
 export interface LLMCompletionResult {

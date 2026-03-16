@@ -13,55 +13,33 @@ async function main() {
     console.log('  Alpicia - AI Personal Assistant');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     try {
-        if (process.argv[2] === 'dashboard') {
-            console.log('      Mode: Viral Dashboard (Offline Mock)\n');
-            // Mock connection for dashboard
+        console.log('[1/6] Connecting to PostgreSQL database...');
+        await connectDatabase();
+        console.log('      Database connected successfully\n');
+        console.log('[2/6] Initializing embedding provider...');
+        const embeddingType = process.env.EMBEDDING_PROVIDER || 'openai';
+        if (process.env.OPENAI_API_KEY || embeddingType === 'ollama') {
+            const embeddingProvider = createEmbeddingProvider(embeddingType);
+            postgresMemory.setEmbeddingProvider(embeddingProvider);
+            console.log(`      Provider: ${embeddingType}\n`);
         }
         else {
-            console.log('[1/6] Connecting to PostgreSQL database...');
-            await connectDatabase();
-            console.log('      Database connected successfully\n');
+            console.log('      No embedding provider configured (vector search disabled)\n');
         }
-        if (process.argv[2] !== 'dashboard') {
-            console.log('[2/6] Initializing embedding provider...');
-            // ... (existing embedding logic)
-            const embeddingType = process.env.EMBEDDING_PROVIDER || 'openai';
-            if (process.env.OPENAI_API_KEY || embeddingType === 'ollama') {
-                const embeddingProvider = createEmbeddingProvider(embeddingType);
-                postgresMemory.setEmbeddingProvider(embeddingProvider);
-                console.log(`      Provider: ${embeddingType}\n`);
-            }
-            else {
-                console.log('      No embedding provider configured (vector search disabled)\n');
-            }
-            console.log('[3/6] Loading plugins...');
-            await pluginManager.loadFromDirectory();
-            console.log(`      Loaded ${pluginManager.getLoaded().length} plugins\n`);
-            console.log('[4/6] Initializing agents and tools...');
-            await personaService.seedDefaults();
-            await toolRegistry.seedBuiltinTools();
-            const personas = await personaService.list();
-            const tools = await toolRegistry.getEnabled();
-            console.log(`      ${personas.length} personas, ${tools.length} tools available\n`);
-            console.log('[5/6] Loading configuration...');
-            const config = await configLoader.load(); // Load strictly for services
-        }
-        // Dashboard logic
-        if (process.argv[2] === 'dashboard') {
-            const { startInteractiveDashboard } = await import('./cli/dashboard-interactive.js');
-            await startInteractiveDashboard();
-            return; // Exit main flow, dashboard runs its own loop
-        }
-        const config = await configLoader.load(); // Reload if needed or move up scope (refactoring for cleaner flow)
+        console.log('[3/6] Loading plugins...');
+        await pluginManager.loadFromDirectory();
+        console.log(`      Loaded ${pluginManager.getLoaded().length} plugins\n`);
+        console.log('[4/6] Initializing agents and tools...');
+        await personaService.seedDefaults();
+        await toolRegistry.seedBuiltinTools();
+        const personas = await personaService.list();
+        const tools = await toolRegistry.getEnabled();
+        console.log(`      ${personas.length} personas, ${tools.length} tools available\n`);
+        console.log('[5/6] Loading configuration...');
+        const config = await configLoader.load();
         console.log(`      Name: ${config.soul.name} v${config.soul.version}`);
-        // ...
         console.log('[6/6] Starting services...');
-        if (process.argv[2] === 'cli') {
-            console.log('      Mode: CLI\n');
-            const { startCLI } = await import('./cli/index.js');
-            await startCLI(config);
-        }
-        else if (process.argv[2] === 'api') {
+        if (process.argv[2] === 'api') {
             console.log('      Mode: API Server\n');
             await apiServer.start();
             await scheduler.start();

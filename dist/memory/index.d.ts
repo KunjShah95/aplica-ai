@@ -1,11 +1,11 @@
 export { JSONLStore, jsonlStore } from './jsonl.js';
 export { MarkdownMemory, markdownMemory } from './markdown.js';
-export { SQLiteMemory, sqliteMemory } from './sqlite.js';
 export { PostgresMemory, postgresMemory } from './postgres.js';
+export { UserPreferenceLearner, userPreferenceLearner, type UserPreference, type UserProfile, type PreferenceObservation, } from './user-preferences.js';
+export { EpisodicSummarizer, episodicSummarizer, type EpisodicMemory, type SummarizedEpisode, type SummarizationConfig, } from './episodic-summarizer.js';
 import { MemoryEntry } from './jsonl.js';
 import { MarkdownNote, DailyLog, LogEntry } from './markdown.js';
-import { SearchResult } from './sqlite.js';
-export type MemoryStore = 'jsonl' | 'markdown' | 'sqlite' | 'postgres';
+export type MemoryStore = 'jsonl' | 'markdown' | 'postgres';
 export interface MemoryManagerOptions {
     defaultStore?: MemoryStore;
     enableVectorSearch?: boolean;
@@ -23,6 +23,14 @@ export interface MemorySearchOptions {
 export interface MemoryResult {
     store: MemoryStore;
     results: SearchResult[];
+}
+interface SearchResult {
+    id: string;
+    content: string;
+    metadata: Record<string, unknown>;
+    score: number;
+    type: string;
+    createdAt: string;
 }
 export declare class MemoryManager {
     private defaultStore;
@@ -66,12 +74,6 @@ export declare class MemoryManager {
             notesCount: number;
             logsCount: number;
         };
-        sqlite: {
-            totalEntries: number;
-            byType: Record<string, number>;
-            tagsCount: number;
-            databaseSize: number;
-        };
         postgres?: {
             total: number;
             byType: Record<string, number>;
@@ -81,5 +83,5 @@ export declare class MemoryManager {
     private parseMetadata;
 }
 export declare const memoryManager: MemoryManager;
-export type { MemoryEntry, MarkdownNote, DailyLog, LogEntry, SearchResult };
+export type { MemoryEntry, MarkdownNote, DailyLog, LogEntry };
 //# sourceMappingURL=index.d.ts.map

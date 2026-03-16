@@ -72,7 +72,7 @@ export interface MessagingConfig {
     };
 }
 export interface MemoryConfig {
-    type: 'jsonl' | 'sqlite' | 'postgres';
+    type: 'jsonl' | 'postgres';
     path: string;
     maxEntries: number;
     searchEnabled: boolean;

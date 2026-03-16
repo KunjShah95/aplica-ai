@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from "react";
 import {
   Workflow,
-  Play,
   Users,
   Cloud,
   Settings,
@@ -9,9 +8,6 @@ import {
   Box,
   Zap,
   BarChart3,
-  Shield,
-  Menu,
-  X,
   Moon,
   Sun,
   Globe,
@@ -44,7 +40,6 @@ type Tab =
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("workflow");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
@@ -60,7 +55,8 @@ function App() {
 
   const handleAddNode = useCallback(
     (type: NodeType) => {
-      addNode(type, [Math.random() * 300 + 100, Math.random() * 300 + 100]);
+      const label = `${type.charAt(0).toUpperCase()}${type.slice(1)} Node`;
+      addNode(type, [Math.random() * 300 + 100, Math.random() * 300 + 100], label);
     },
     [addNode],
   );

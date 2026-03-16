@@ -63,6 +63,7 @@ export declare class ApiServer {
     private handleApproveRequest;
     private handleDenyRequest;
     private handleHealth;
+    private handleGetLlmOps;
 }
 export declare const apiServer: ApiServer;
 //# sourceMappingURL=server.d.ts.map

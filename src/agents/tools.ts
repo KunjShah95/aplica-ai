@@ -17,27 +17,28 @@ import { urlShortener } from '../tools/url-shortener.js';
 import { windowsTool } from '../tools/windows.js';
 import { auditLogger } from '../security/audit.js';
 import { sanitizeLogData } from '../security/encryption.js';
+import { liveCanvasManager } from '../canvas/live-canvas.js';
 
 export interface ToolDefinition {
   name: string;
   description: string;
   schema: {
     type: 'object';
-    properties: Record<
-      string,
-      {
-        type: string;
-        description?: string;
-        enum?: string[];
-        items?: { type: string };
-        default?: unknown;
-      }
-    >;
+    properties: Record<string, SchemaProperty>;
     required?: string[];
   };
   handler: string;
   category?: string;
   permissions?: string[];
+}
+
+interface SchemaProperty {
+  type: string;
+  description?: string;
+  enum?: string[];
+  items?: SchemaProperty | Record<string, SchemaProperty>;
+  default?: unknown;
+  properties?: Record<string, SchemaProperty>;
 }
 
 export interface ToolExecutionInput {
@@ -305,6 +306,38 @@ export class ToolRegistry {
       if (!input.action) throw new Error('action is required');
       return windowsTool.execute(input as any);
     });
+
+    this.registerHandler('builtin:canvas_render', async (input) => {
+      const { canvasId, elements, action } = input as {
+        canvasId?: string;
+        elements?: any[];
+        action?: {
+          type: 'create' | 'update' | 'delete' | 'clear';
+          element?: any;
+          elementId?: string;
+          updates?: any;
+        };
+      };
+
+      const request = {
+        type: 'canvas_render' as const,
+        payload: { canvasId, elements, action },
+      };
+
+      return liveCanvasManager.handleRenderRequest(request);
+    });
+
+    this.registerHandler('builtin:canvas_list', async () => {
+      return liveCanvasManager.listCanvases();
+    });
+
+    this.registerHandler('builtin:canvas_get', async (input) => {
+      const canvasId = input.canvasId as string;
+      if (!canvasId) throw new Error('canvasId is required');
+      const canvas = liveCanvasManager.getCanvas(canvasId);
+      if (!canvas) throw new Error('Canvas not found');
+      return { id: canvas.getId(), name: canvas.getName(), state: canvas.getState() };
+    });
   }
 
   async register(tool: ToolDefinition): Promise<void> {
@@ -364,7 +397,9 @@ export class ToolRegistry {
       const secureMode = process.env.SECURE_MODE === 'true';
       if (!input.userId) {
         if (secureMode) {
-          throw new Error('Security Alert: Anonymous tool execution is not allowed in secure mode.');
+          throw new Error(
+            'Security Alert: Anonymous tool execution is not allowed in secure mode.'
+          );
         }
       } else {
         const user = await db.user.findUnique({ where: { id: input.userId } });
@@ -373,9 +408,7 @@ export class ToolRegistry {
         }
 
         const role = (user.role as UserRole) || 'USER';
-        const envPermissions = parsePermissionList(
-          process.env[`TOOL_PERMISSIONS_${role}`]
-        );
+        const envPermissions = parsePermissionList(process.env[`TOOL_PERMISSIONS_${role}`]);
         const allowedPermissions =
           envPermissions.length > 0 ? envPermissions : DEFAULT_ROLE_TOOL_PERMISSIONS[role];
 
@@ -1009,6 +1042,70 @@ export class ToolRegistry {
         },
         handler: 'builtin:shorten_url',
         category: 'utility',
+      },
+      {
+        name: 'canvas_render',
+        description: 'Render elements on a live canvas for the user to see',
+        schema: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas ID (optional, creates new if not provided)',
+            },
+            elements: {
+              type: 'array',
+              description: 'Array of canvas elements to create',
+              items: {
+                type: 'object',
+                properties: {
+                  elementType: {
+                    type: 'string',
+                    enum: ['text', 'button', 'input', 'chart', 'html', 'markdown'],
+                  },
+                  x: { type: 'number' },
+                  y: { type: 'number' },
+                  width: { type: 'number' },
+                  height: { type: 'number' },
+                  content: { type: 'string' },
+                },
+              },
+            },
+            action: {
+              type: 'object',
+              properties: {
+                actionType: { type: 'string', enum: ['create', 'update', 'delete', 'clear'] },
+                elementId: { type: 'string' },
+                updates: { type: 'object', description: 'Updates to apply' },
+              },
+            },
+          },
+        },
+        handler: 'builtin:canvas_render',
+        category: 'ui',
+      },
+      {
+        name: 'canvas_list',
+        description: 'List all active canvases',
+        schema: {
+          type: 'object',
+          properties: {},
+        },
+        handler: 'builtin:canvas_list',
+        category: 'ui',
+      },
+      {
+        name: 'canvas_get',
+        description: 'Get canvas state by ID',
+        schema: {
+          type: 'object',
+          properties: {
+            canvasId: { type: 'string', description: 'Canvas ID to retrieve' },
+          },
+          required: ['canvasId'],
+        },
+        handler: 'builtin:canvas_get',
+        category: 'ui',
       },
     ];
 

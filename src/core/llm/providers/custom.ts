@@ -22,13 +22,14 @@ export class CustomProvider extends LLMProvider {
   ): Promise<LLMCompletionResult> {
     const maxTokens = options?.maxTokens ?? this.config.maxTokens;
     const temperature = options?.temperature ?? this.config.temperature;
+    const model = options?.model ?? this.config.model;
     const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
 
     const formattedMessages = this.formatMessages(messages, systemPrompt);
 
     try {
       const response = await this.client.chat.completions.create({
-        model: this.config.model,
+        model,
         messages: formattedMessages,
         max_tokens: maxTokens,
         temperature,
@@ -62,12 +63,13 @@ export class CustomProvider extends LLMProvider {
   async *stream(messages: LLMMessage[], options?: LLMCompletionOptions): AsyncIterable<string> {
     const maxTokens = options?.maxTokens ?? this.config.maxTokens;
     const temperature = options?.temperature ?? this.config.temperature;
+    const model = options?.model ?? this.config.model;
     const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
 
     const formattedMessages = this.formatMessages(messages, systemPrompt);
 
     const stream = await this.client.chat.completions.create({
-      model: this.config.model,
+      model,
       messages: formattedMessages,
       max_tokens: maxTokens,
       temperature,

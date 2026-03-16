@@ -57,9 +57,9 @@ export declare class WorkflowEngine {
             error: string | null;
             status: import(".prisma/client").$Enums.ExecutionStatus;
             id: string;
+            startedAt: Date;
             inputs: import("@prisma/client/runtime/library").JsonValue;
             outputs: import("@prisma/client/runtime/library").JsonValue | null;
-            startedAt: Date;
             completedAt: Date | null;
             nodeId: string;
             nodeName: string | null;
@@ -69,11 +69,11 @@ export declare class WorkflowEngine {
         error: string | null;
         status: import(".prisma/client").$Enums.ExecutionStatus;
         id: string;
+        startedAt: Date;
         workflowId: string;
         triggeredBy: string | null;
         inputs: import("@prisma/client/runtime/library").JsonValue;
         outputs: import("@prisma/client/runtime/library").JsonValue | null;
-        startedAt: Date;
         completedAt: Date | null;
     }) | null>;
     listExecutions(workflowId: string, limit?: number): Promise<({
@@ -84,11 +84,11 @@ export declare class WorkflowEngine {
         error: string | null;
         status: import(".prisma/client").$Enums.ExecutionStatus;
         id: string;
+        startedAt: Date;
         workflowId: string;
         triggeredBy: string | null;
         inputs: import("@prisma/client/runtime/library").JsonValue;
         outputs: import("@prisma/client/runtime/library").JsonValue | null;
-        startedAt: Date;
         completedAt: Date | null;
     })[]>;
     cancelExecution(executionId: string): Promise<void>;

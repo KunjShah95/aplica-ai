@@ -11,6 +11,9 @@ export class MetricsService {
     workflowExecutions;
     errorTotal;
     queueSize;
+    modelRoutingDecisions;
+    budgetEvents;
+    llmSpendUsd;
     constructor() {
         this.registry = new Registry();
         collectDefaultMetrics({ register: this.registry });
@@ -76,6 +79,24 @@ export class MetricsService {
             labelNames: ['queue'],
             registers: [this.registry],
         });
+        this.modelRoutingDecisions = new Counter({
+            name: 'llm_model_routing_decisions_total',
+            help: 'Total model routing decisions by tier and model',
+            labelNames: ['tier', 'model'],
+            registers: [this.registry],
+        });
+        this.budgetEvents = new Counter({
+            name: 'llm_budget_events_total',
+            help: 'Budget governor events',
+            labelNames: ['event'],
+            registers: [this.registry],
+        });
+        this.llmSpendUsd = new Counter({
+            name: 'llm_spend_usd_total',
+            help: 'Total LLM spend estimated in USD',
+            labelNames: ['provider', 'model'],
+            registers: [this.registry],
+        });
     }
     recordHttpRequest(method, path, status, duration) {
         const normalizedPath = this.normalizePath(path);
@@ -104,6 +125,17 @@ export class MetricsService {
     }
     setQueueSize(queue, size) {
         this.queueSize.labels(queue).set(size);
+    }
+    recordModelRoutingDecision(tier, model) {
+        this.modelRoutingDecisions.labels(tier, model).inc();
+    }
+    recordBudgetEvent(event) {
+        this.budgetEvents.labels(event).inc();
+    }
+    recordLlmSpend(provider, model, usd) {
+        if (usd > 0) {
+            this.llmSpendUsd.labels(provider, model).inc(usd);
+        }
     }
     normalizePath(path) {
         return path

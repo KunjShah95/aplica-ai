@@ -24,12 +24,13 @@ export declare class MessageRouter {
     constructor(agent?: Agent);
     setAgent(agent: Agent): void;
     route(message: RouterMessage): Promise<RouterResponse>;
+    private estimateTokens;
     private updateAverageResponseTime;
     registerHandler(source: string, handler: MessageHandler): void;
     unregisterHandler(source: string): boolean;
     handleFromTelegram(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromDiscord(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
-    handleFromWebSocket(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
+    handleFromWebSocket(userId: string, message: string, conversationId?: string, metadata?: Record<string, unknown>): Promise<RouterResponse>;
     handleFromSlack(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromCLI(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;
     handleFromWhatsApp(userId: string, message: string, conversationId?: string): Promise<RouterResponse>;

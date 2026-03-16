@@ -11,6 +11,9 @@ export declare class MetricsService {
     workflowExecutions: Counter;
     errorTotal: Counter;
     queueSize: Gauge;
+    modelRoutingDecisions: Counter;
+    budgetEvents: Counter;
+    llmSpendUsd: Counter;
     constructor();
     recordHttpRequest(method: string, path: string, status: number, duration: number): void;
     recordLlmRequest(provider: string, model: string, status: 'success' | 'error', duration: number, tokens?: {
@@ -22,6 +25,9 @@ export declare class MetricsService {
     recordError(type: string, source: string): void;
     setActiveConnections(type: string, count: number): void;
     setQueueSize(queue: string, size: number): void;
+    recordModelRoutingDecision(tier: string, model: string): void;
+    recordBudgetEvent(event: 'allow' | 'downgrade' | 'user_limit' | 'global_limit'): void;
+    recordLlmSpend(provider: string, model: string, usd: number): void;
     private normalizePath;
     getMetrics(): Promise<string>;
     getMetricsContentType(): Promise<string>;

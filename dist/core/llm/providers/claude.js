@@ -11,13 +11,14 @@ export class ClaudeProvider extends LLMProvider {
     async complete(messages, options) {
         const maxTokens = options?.maxTokens ?? this.config.maxTokens;
         const temperature = options?.temperature ?? this.config.temperature;
+        const model = options?.model ?? this.config.model;
         const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
         const formattedMessages = messages.map(msg => ({
             role: msg.role,
             content: msg.content
         }));
         const response = await this.client.messages.create({
-            model: this.config.model,
+            model,
             max_tokens: maxTokens,
             temperature,
             system: systemPrompt,
@@ -36,13 +37,14 @@ export class ClaudeProvider extends LLMProvider {
     async *stream(messages, options) {
         const maxTokens = options?.maxTokens ?? this.config.maxTokens;
         const temperature = options?.temperature ?? this.config.temperature;
+        const model = options?.model ?? this.config.model;
         const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
         const formattedMessages = messages.map(msg => ({
             role: msg.role,
             content: msg.content
         }));
         const stream = await this.client.messages.create({
-            model: this.config.model,
+            model,
             max_tokens: maxTokens,
             temperature,
             system: systemPrompt,

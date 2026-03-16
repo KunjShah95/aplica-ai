@@ -1,10 +1,10 @@
 export class HealthService {
     checks = new Map();
     version;
-    startTime;
+    startTimeHr;
     constructor(version = '1.0.0') {
         this.version = version;
-        this.startTime = new Date();
+        this.startTimeHr = process.hrtime.bigint();
         this.registerDefaultChecks();
     }
     registerDefaultChecks() {
@@ -89,7 +89,7 @@ export class HealthService {
             status,
             timestamp: new Date().toISOString(),
             version: this.version,
-            uptime: (Date.now() - this.startTime.getTime()) / 1000,
+            uptime: Number(process.hrtime.bigint() - this.startTimeHr) / 1e9,
             checks: results,
         };
     }

@@ -91,9 +91,9 @@ export declare class WebhookService {
         createdAt: Date;
         success: boolean;
         response: Prisma.JsonValue | null;
+        event: string;
         webhookId: string;
         statusCode: number | null;
-        event: string;
     }[]>;
     retry(deliveryId: string): Promise<WebhookResult>;
 }

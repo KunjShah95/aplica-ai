@@ -1,10 +1,5 @@
-import React from "react";
-import { X, Settings, Save, Trash2 } from "lucide-react";
-import {
-  useWorkflowStore,
-  NodeType,
-  WorkflowNodeData,
-} from "../../store/workflowStore";
+import { X, Settings, Trash2 } from "lucide-react";
+import { useWorkflowStore, NodeType } from "../../store/workflowStore";
 
 const nodeTypeLabels: Record<NodeType, string> = {
   trigger: "Trigger",

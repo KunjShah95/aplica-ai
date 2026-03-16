@@ -1,6 +1,12 @@
 import { randomUUID } from 'crypto';
 import { promptGuard } from '../security/prompt-guard.js';
 import { RateLimiter } from '../security/rate-limit.js';
+import { smartModelRouter } from '../agents/model-router.js';
+import { budgetGovernor } from '../analytics/budget-governor.js';
+import { usageTracker } from '../analytics/usage.js';
+import { llmOpsTelemetry } from '../analytics/llm-ops.js';
+import { metricsService } from '../monitoring/metrics.js';
+import { costTracker } from '../monitoring/cost-tracker.js';
 export class MessageRouter {
     agent = null;
     handlers = new Map();
@@ -41,12 +47,78 @@ export class MessageRouter {
             if (!rate.allowed) {
                 throw new Error(`Rate limit exceeded. Retry after ${rate.retryAfter}s.`);
             }
+            const preferredModel = typeof message.metadata?.preferredModel === 'string'
+                ? message.metadata.preferredModel
+                : undefined;
+            let routingDecision = smartModelRouter.routeMessage(safeContent, preferredModel);
+            metricsService.recordModelRoutingDecision(routingDecision.tier, routingDecision.model);
+            llmOpsTelemetry.trackRoutingDecision(routingDecision.tier, routingDecision.model);
+            const provider = this.agent.getConfig().llm.provider;
+            const estimatedPromptTokens = this.estimateTokens(safeContent);
+            const estimatedCompletionTokens = routingDecision.tier === 'simple'
+                ? 300
+                : routingDecision.tier === 'medium'
+                    ? 700
+                    : 1400;
+            let estimatedCost = budgetGovernor.estimateCost(provider, routingDecision.model, estimatedPromptTokens, estimatedCompletionTokens);
+            let budgetCheck = budgetGovernor.check(message.userId, estimatedCost);
+            if (!budgetCheck.allowed && routingDecision.tier !== 'simple') {
+                const simpleDecision = smartModelRouter.routeMessage(safeContent, process.env.MODEL_ROUTER_SIMPLE_MODEL);
+                const simpleCost = budgetGovernor.estimateCost(provider, simpleDecision.model, estimatedPromptTokens, 300);
+                const fallbackCheck = budgetGovernor.check(message.userId, simpleCost);
+                if (fallbackCheck.allowed) {
+                    routingDecision = simpleDecision;
+                    estimatedCost = simpleCost;
+                    budgetCheck = fallbackCheck;
+                    metricsService.recordBudgetEvent('downgrade');
+                    llmOpsTelemetry.trackBudgetEvent('downgrade');
+                }
+            }
+            if (!budgetCheck.allowed) {
+                metricsService.recordBudgetEvent(budgetCheck.reason === 'global_limit_exceeded' ? 'global_limit' : 'user_limit');
+                llmOpsTelemetry.trackBudgetEvent(budgetCheck.reason === 'global_limit_exceeded' ? 'global_limit' : 'user_limit');
+                throw new Error(budgetCheck.reason === 'global_limit_exceeded'
+                    ? 'Global daily budget reached. Please try again later.'
+                    : 'Daily user budget reached. Please try again tomorrow or use a cheaper model.');
+            }
             let conversationId = message.conversationId;
             if (!conversationId) {
                 const result = await this.agent.startConversation(message.userId, message.source, safeContent);
                 conversationId = result.conversationId;
             }
-            const response = await this.agent.processMessage(safeContent, conversationId, message.userId, message.source);
+            const response = await this.agent.processMessage(safeContent, conversationId, message.userId, message.source, {
+                modelOverride: routingDecision.model,
+                routingTier: routingDecision.tier,
+            });
+            const promptTokens = estimatedPromptTokens;
+            const completionTokens = Math.max(0, response.tokensUsed - promptTokens);
+            const modelUsed = response.model || routingDecision.model;
+            const actualCost = budgetGovernor.estimateCost(provider, modelUsed, promptTokens, completionTokens);
+            budgetGovernor.record(message.userId, actualCost);
+            metricsService.recordBudgetEvent('allow');
+            metricsService.recordLlmSpend(provider, modelUsed, actualCost);
+            llmOpsTelemetry.trackBudgetEvent('allow');
+            llmOpsTelemetry.trackSpend(modelUsed, actualCost);
+            metricsService.recordLlmRequest(provider, modelUsed, 'success', (Date.now() - startTime) / 1000, { prompt: promptTokens, completion: completionTokens });
+            try {
+                await usageTracker.recordLLM(modelUsed, promptTokens, completionTokens, actualCost, {
+                    userId: message.userId,
+                    conversationId,
+                    metadata: {
+                        source: message.source,
+                        routingTier: response.routingTier || routingDecision.tier,
+                        estimatedCost,
+                    },
+                });
+                costTracker.track(conversationId, message.userId, provider, modelUsed, {
+                    promptTokens,
+                    completionTokens,
+                    totalTokens: response.tokensUsed,
+                }, 'message-router');
+            }
+            catch (trackingError) {
+                console.warn('Usage tracking warning:', trackingError);
+            }
             this.stats.successfulMessages++;
             const responseTime = Date.now() - startTime;
             this.updateAverageResponseTime(responseTime);
@@ -61,9 +133,16 @@ export class MessageRouter {
         }
         catch (error) {
             this.stats.failedMessages++;
+            if (this.agent) {
+                const provider = this.agent.getConfig().llm.provider;
+                metricsService.recordLlmRequest(provider, this.agent.getConfig().llm.model, 'error', (Date.now() - startTime) / 1000);
+            }
             console.error(`Message ${message.id} routing failed:`, error);
             throw error;
         }
+    }
+    estimateTokens(text) {
+        return Math.ceil(text.length / 4);
     }
     updateAverageResponseTime(newTime) {
         const total = this.stats.successfulMessages;
@@ -97,13 +176,14 @@ export class MessageRouter {
             timestamp: new Date(),
         });
     }
-    async handleFromWebSocket(userId, message, conversationId) {
+    async handleFromWebSocket(userId, message, conversationId, metadata) {
         return this.route({
             id: randomUUID(),
             content: message,
             userId,
             conversationId,
             source: 'websocket',
+            metadata,
             timestamp: new Date(),
         });
     }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Search,
   Star,
@@ -7,7 +7,6 @@ import {
   Clock,
   Zap,
   MessageSquare,
-  Mail,
   FileText,
   Shield,
   CheckCircle,

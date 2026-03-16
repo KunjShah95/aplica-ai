@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    
+
     "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -15,7 +15,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    
+
     "paths": {
       "@/*": ["./src/*"],
       "@core/*": ["./src/core/*"],
@@ -38,6 +38,9 @@
       "@storage/*": ["./src/storage/*"],
       "@notifications/*": ["./src/notifications/*"],
       "@monitoring/*": ["./src/monitoring/*"],
+      "@evolution/*": ["./src/evolution/*"],
+      "@analytics/*": ["./src/analytics/*"],
+      "@world-hooks/*": ["./src/world-hooks/*"],
       "@config/*": ["./src/config/*"]
     }
   },

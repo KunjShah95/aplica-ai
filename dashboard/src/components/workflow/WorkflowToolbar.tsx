@@ -1,22 +1,41 @@
-import React from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Play,
   Pause,
   Save,
   Download,
-  Upload,
   RotateCcw,
   ZoomIn,
   ZoomOut,
   Maximize,
   Share2,
-  Settings,
 } from "lucide-react";
 import { useWorkflowStore } from "../../store/workflowStore";
 
 interface WorkflowToolbarProps {
   onExecute: () => void;
   isExecuting: boolean;
+}
+
+interface LlmOpsTelemetry {
+  routing: {
+    simple: number;
+    medium: number;
+    complex: number;
+    total: number;
+    byModel: Record<string, number>;
+  };
+  budget: {
+    allow: number;
+    downgrade: number;
+    userLimit: number;
+    globalLimit: number;
+  };
+  spend: {
+    totalUsd: number;
+    byModel: Record<string, number>;
+  };
+  updatedAt: string;
 }
 
 export default function WorkflowToolbar({
@@ -32,6 +51,46 @@ export default function WorkflowToolbar({
     nodes,
     edges,
   } = useWorkflowStore();
+  const [llmOps, setLlmOps] = useState<LlmOpsTelemetry | null>(null);
+
+  const apiBaseUrl =
+    (import.meta as ImportMeta & { env?: Record<string, string> }).env
+      ?.VITE_API_BASE_URL || "http://localhost:3000";
+
+  const budgetHealth = useMemo(() => {
+    if (!llmOps) return "unknown" as const;
+    if (llmOps.budget.globalLimit > 0 || llmOps.budget.userLimit > 0)
+      return "blocked" as const;
+    if (llmOps.budget.downgrade > 0) return "degraded" as const;
+    return "healthy" as const;
+  }, [llmOps]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchLlmOps = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/health/llm-ops`);
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          telemetry?: LlmOpsTelemetry;
+        };
+        if (!cancelled && payload.telemetry) {
+          setLlmOps(payload.telemetry);
+        }
+      } catch {
+        // silent fallback: keep toolbar functional even when API is unavailable
+      }
+    };
+
+    void fetchLlmOps();
+    const interval = window.setInterval(fetchLlmOps, 10000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [apiBaseUrl]);
 
   const handleSave = async () => {
     const workflow = {
@@ -117,6 +176,22 @@ export default function WorkflowToolbar({
         {isDirty && (
           <span className="text-xs text-amber-400">● Unsaved changes</span>
         )}
+
+        <span
+          className={`text-xs px-2 py-1 rounded-full border ${
+            budgetHealth === "healthy"
+              ? "text-emerald-300 border-emerald-500/40 bg-emerald-500/10"
+              : budgetHealth === "degraded"
+                ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
+                : budgetHealth === "blocked"
+                  ? "text-rose-300 border-rose-500/40 bg-rose-500/10"
+                  : "text-slate-300 border-slate-600 bg-slate-800/40"
+          }`}
+          title="Live model routing and budget telemetry"
+        >
+          LLM Ops: {budgetHealth === "unknown" ? "N/A" : budgetHealth}
+          {llmOps ? ` • $${llmOps.spend.totalUsd.toFixed(3)}` : ""}
+        </span>
       </div>
 
       <div className="flex items-center gap-2">

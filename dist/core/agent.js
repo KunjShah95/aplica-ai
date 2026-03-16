@@ -96,7 +96,7 @@ ${identity.availability.enabled ? `- Availability: ${identity.availability.defau
 You are helpful, precise, and proactive. You provide clear and concise responses while respecting user preferences and privacy.`;
         }
     }
-    async processMessage(content, conversationId, userId, source) {
+    async processMessage(content, conversationId, userId, source, options) {
         // 1. Security Check: Prompt Guard
         const securityCheck = promptGuard.validate(content);
         if (!securityCheck.valid) {
@@ -126,6 +126,7 @@ You are helpful, precise, and proactive. You provide clear and concise responses
             systemPrompt: this.systemPrompt,
             maxTokens: this.config.llm.maxTokens,
             temperature: this.config.llm.temperature,
+            model: options?.modelOverride,
         });
         await conversationManager.addMessage(conversationId, 'assistant', result.content, {
             source: 'assistant',
@@ -141,6 +142,8 @@ You are helpful, precise, and proactive. You provide clear and concise responses
             message: result.content,
             conversationId,
             tokensUsed: result.tokensUsed,
+            model: result.model,
+            routingTier: options?.routingTier,
             timestamp: new Date(),
         };
     }

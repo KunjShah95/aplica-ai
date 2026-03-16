@@ -110,7 +110,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const newNode: Node<WorkflowNodeData> = {
       id,
       type: "workflow",
-      position,
+      position: { x: position[0], y: position[1] },
       data: {
         label,
         type,

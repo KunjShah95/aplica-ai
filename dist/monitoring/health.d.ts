@@ -21,7 +21,7 @@ export interface HealthStatus {
 export declare class HealthService {
     private checks;
     private version;
-    private startTime;
+    private startTimeHr;
     constructor(version?: string);
     private registerDefaultChecks;
     register(check: HealthCheck): void;

@@ -2,6 +2,8 @@ export { ShellExecutor, shellExecutor } from './shell.js';
 export { FileSystemExecutor, fileSystemExecutor } from './filesystem.js';
 export { BrowserExecutor, browserExecutor } from './browser.js';
 export { SandboxExecutor, sandboxExecutor } from './sandbox.js';
+export { GitAutopilot, gitAutopilot } from './git-autopilot.js';
+export { CICSelfHealer, ciSelfHealer } from './ci-healer.js';
 
 import { shellExecutor } from './shell.js';
 import { fileSystemExecutor } from './filesystem.js';

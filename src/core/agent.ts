@@ -18,6 +18,8 @@ export interface AgentResponse {
   message: string;
   conversationId: string;
   tokensUsed: number;
+  model?: string;
+  routingTier?: string;
   timestamp: Date;
 }
 
@@ -141,7 +143,8 @@ You are helpful, precise, and proactive. You provide clear and concise responses
       | 'matrix'
       | 'webchat'
       | 'slack'
-      | 'whatsapp'
+      | 'whatsapp',
+    options?: { modelOverride?: string; routingTier?: string }
   ): Promise<AgentResponse> {
     // 1. Security Check: Prompt Guard
     const securityCheck = promptGuard.validate(content);
@@ -178,6 +181,7 @@ You are helpful, precise, and proactive. You provide clear and concise responses
       systemPrompt: this.systemPrompt,
       maxTokens: this.config.llm.maxTokens,
       temperature: this.config.llm.temperature,
+      model: options?.modelOverride,
     });
 
     await conversationManager.addMessage(conversationId, 'assistant', result.content, {
@@ -196,6 +200,8 @@ You are helpful, precise, and proactive. You provide clear and concise responses
       message: result.content,
       conversationId,
       tokensUsed: result.tokensUsed,
+      model: result.model,
+      routingTier: options?.routingTier,
       timestamp: new Date(),
     };
   }

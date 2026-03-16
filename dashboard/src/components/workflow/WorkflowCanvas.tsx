@@ -1,23 +1,33 @@
-import React, { useCallback, useRef } from "react";
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
-  Edge,
   Node,
   BackgroundVariant,
   Panel,
 } from "reactflow";
-import { useWorkflowStore, NodeType } from "../../store/workflowStore";
+import {
+  useWorkflowStore,
+  NodeType,
+  WorkflowNodeData,
+} from "../../store/workflowStore";
 import WorkflowNode from "./WorkflowNode";
 
 const nodeTypes = {
   workflow: WorkflowNode,
 };
+
+function isNodeType(value: unknown): value is NodeType {
+  return (
+    value === "trigger" ||
+    value === "action" ||
+    value === "condition" ||
+    value === "transform" ||
+    value === "agent" ||
+    value === "loop" ||
+    value === "parallel"
+  );
+}
 
 export default function WorkflowCanvas() {
   const {
@@ -26,16 +36,8 @@ export default function WorkflowCanvas() {
     onNodesChange,
     onEdgesChange,
     onConnect,
-    addNode,
     selectNode,
   } = useWorkflowStore();
-
-  const handleAddNode = useCallback(
-    (type: NodeType) => {
-      addNode(type, [Math.random() * 400 + 100, Math.random() * 300 + 100]);
-    },
-    [addNode],
-  );
 
   return (
     <div className="flex-1 h-full">
@@ -45,7 +47,7 @@ export default function WorkflowCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(_, node) => selectNode(node as Node)}
+        onNodeClick={(_, node) => selectNode(node as Node<WorkflowNodeData>)}
         onPaneClick={() => selectNode(null)}
         nodeTypes={nodeTypes}
         fitView
@@ -81,7 +83,8 @@ export default function WorkflowCanvas() {
               loop: "#06b6d4",
               parallel: "#f97316",
             };
-            return colors[node.data.type] || "#64748b";
+            const type = (node.data as Partial<WorkflowNodeData> | undefined)?.type;
+            return isNodeType(type) ? colors[type] : "#64748b";
           }}
           maskColor="rgba(15, 23, 42, 0.8)"
         />

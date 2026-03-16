@@ -12,10 +12,11 @@ export class GroqProvider extends LLMProvider {
     async complete(messages, options) {
         const maxTokens = options?.maxTokens ?? this.config.maxTokens;
         const temperature = options?.temperature ?? this.config.temperature;
+        const model = options?.model ?? this.config.model;
         const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
         const formattedMessages = this.formatMessages(messages, systemPrompt);
         const response = await this.client.chat.completions.create({
-            model: this.config.model,
+            model,
             messages: formattedMessages,
             max_tokens: maxTokens,
             temperature,
@@ -41,10 +42,11 @@ export class GroqProvider extends LLMProvider {
     async *stream(messages, options) {
         const maxTokens = options?.maxTokens ?? this.config.maxTokens;
         const temperature = options?.temperature ?? this.config.temperature;
+        const model = options?.model ?? this.config.model;
         const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
         const formattedMessages = this.formatMessages(messages, systemPrompt);
         const stream = await this.client.chat.completions.create({
-            model: this.config.model,
+            model,
             messages: formattedMessages,
             max_tokens: maxTokens,
             temperature,

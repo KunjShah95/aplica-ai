@@ -68,8 +68,8 @@ export declare class Scheduler {
         id: string;
         duration: number | null;
         output: import("@prisma/client/runtime/library").JsonValue | null;
-        taskId: string;
         startedAt: Date;
+        taskId: string;
         completedAt: Date | null;
     }[]>;
 }

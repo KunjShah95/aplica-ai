@@ -31,7 +31,6 @@ export declare const schemas: {
             required: boolean;
             type: "string";
             minLength: number;
-            custom: (v: unknown) => boolean | "Password must contain uppercase letter" | "Password must contain lowercase letter" | "Password must contain number";
         };
         username: {
             required: boolean;
@@ -163,7 +162,7 @@ export declare const schemas: {
         };
     };
 };
-export declare function sanitizeInput(input: string): string;
+export declare function sanitizeInput(input: string | null | undefined): string;
 export declare function sanitizeHTML(html: string): string;
 export declare function escapeSQL(value: string): string;
 //# sourceMappingURL=validation.d.ts.map

@@ -151,7 +151,7 @@ export class ConfigLoader {
     }
     loadMemoryConfig() {
         return {
-            type: process.env.MEMORY_TYPE || 'jsonl',
+            type: process.env.MEMORY_TYPE || 'postgres',
             path: process.env.MEMORY_PATH || './memory',
             maxEntries: parseInt(process.env.MEMORY_MAX_ENTRIES || '10000'),
             searchEnabled: process.env.MEMORY_SEARCH !== 'false',

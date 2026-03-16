@@ -18,6 +18,7 @@ import { postgresMemory } from '../memory/postgres.js';
 import { knowledgeBaseService } from '../memory/knowledge-base.js';
 import { teamService } from '../teams/index.js';
 import { analyticsService } from '../analytics/index.js';
+import { llmOpsTelemetry } from '../analytics/llm-ops.js';
 import { MemoryType, MessageRole, DocumentSourceType } from '../types/prisma-types.js';
 import { Permission, hasPermission } from '../auth/permissions.js';
 
@@ -349,6 +350,7 @@ export class ApiServer {
 
     // Health
     this.addRoute('GET', '/api/health', this.handleHealth.bind(this), false);
+    this.addRoute('GET', '/api/health/llm-ops', this.handleGetLlmOps.bind(this), false);
   }
 
   private addRoute(
@@ -921,6 +923,13 @@ export class ApiServer {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
+    });
+  }
+
+  private async handleGetLlmOps(ctx: RequestContext): Promise<void> {
+    this.sendJson(ctx.res, {
+      status: 'ok',
+      telemetry: llmOpsTelemetry.getSnapshot(),
     });
   }
 }

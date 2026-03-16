@@ -200,7 +200,9 @@ export class OpenAIEndpoint {
     try {
       const response = await this.router.handleFromWebSocket(
         request.user || 'api-user',
-        lastUserMessage.content
+        lastUserMessage.content,
+        undefined,
+        { preferredModel: request.model, api: 'openai-compatible' }
       );
 
       return {

@@ -1,15 +1,15 @@
 export { JSONLStore, jsonlStore } from './jsonl.js';
 export { MarkdownMemory, markdownMemory } from './markdown.js';
-export { SQLiteMemory, sqliteMemory } from './sqlite.js';
 export { PostgresMemory, postgresMemory } from './postgres.js';
+export { UserPreferenceLearner, userPreferenceLearner, } from './user-preferences.js';
+export { EpisodicSummarizer, episodicSummarizer, } from './episodic-summarizer.js';
 import { jsonlStore } from './jsonl.js';
 import { markdownMemory } from './markdown.js';
-import { sqliteMemory } from './sqlite.js';
 import { postgresMemory } from './postgres.js';
 export class MemoryManager {
     defaultStore;
     constructor(options = {}) {
-        this.defaultStore = options.defaultStore || 'sqlite';
+        this.defaultStore = options.defaultStore || 'postgres';
     }
     async saveConversation(conversationId, userId, messages) {
         const content = JSON.stringify({
@@ -23,11 +23,12 @@ export class MemoryManager {
             content,
             metadata: { conversationId, userId, messageCount: messages.length },
         });
-        await sqliteMemory.add({
+        await postgresMemory.add({
             id: conversationId,
-            type: 'conversation',
+            userId: userId,
+            type: 'CONVERSATION_SUMMARY',
             content: messages.map((m) => `[${m.role}] ${m.content}`).join('\n'),
-            metadata: JSON.stringify({ conversationId, userId }),
+            metadata: { conversationId, userId },
         });
     }
     async saveNote(note) {
@@ -51,7 +52,7 @@ export class MemoryManager {
     async search(options) {
         const { query, store, limit = 10, type, tags } = options;
         const results = [];
-        const storesToSearch = store ? [store] : ['jsonl', 'sqlite', 'postgres'];
+        const storesToSearch = store ? [store] : ['jsonl', 'postgres'];
         if (storesToSearch.includes('postgres')) {
             try {
                 const postgresResults = await postgresMemory.search({
@@ -75,20 +76,6 @@ export class MemoryManager {
             }
             catch (error) {
                 console.error('PostgreSQL search failed:', error);
-            }
-        }
-        if (storesToSearch.includes('sqlite')) {
-            try {
-                const sqliteResults = await sqliteMemory.search({
-                    query,
-                    limit,
-                    type,
-                    tags,
-                });
-                results.push({ store: 'sqlite', results: sqliteResults });
-            }
-            catch (error) {
-                console.error('SQLite search failed:', error);
             }
         }
         if (storesToSearch.includes('jsonl')) {
@@ -139,7 +126,7 @@ export class MemoryManager {
         }
         const searchResults = await this.search({
             query: conversationId,
-            store: 'sqlite',
+            store: 'postgres',
             limit: 5,
         });
         if (searchResults.length > 0) {
@@ -167,13 +154,10 @@ export class MemoryManager {
             .join('\n');
     }
     async forget(id, store) {
-        const stores = store ? [store] : ['jsonl', 'sqlite', 'markdown', 'postgres'];
+        const stores = store ? [store] : ['jsonl', 'markdown', 'postgres'];
         let deleted = false;
         if (stores.includes('postgres')) {
             deleted = (await postgresMemory.delete(id)) || deleted;
-        }
-        if (stores.includes('sqlite')) {
-            deleted = (await sqliteMemory.delete(id)) || deleted;
         }
         if (stores.includes('jsonl')) {
             deleted = (await jsonlStore.delete(id)) || deleted;
@@ -184,18 +168,12 @@ export class MemoryManager {
         return deleted;
     }
     async clear() {
-        await Promise.all([
-            jsonlStore.clear(),
-            sqliteMemory.clear(),
-            postgresMemory.clear(),
-            markdownMemory,
-        ]);
+        await Promise.all([jsonlStore.clear(), postgresMemory.clear(), markdownMemory]);
     }
     async getStats() {
         const stats = {
             jsonl: await jsonlStore.getStats(),
             markdown: markdownMemory.getStatus(),
-            sqlite: await sqliteMemory.getStats(),
         };
         try {
             stats.postgres = await postgresMemory.getStats('default');

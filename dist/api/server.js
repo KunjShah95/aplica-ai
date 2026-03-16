@@ -7,6 +7,7 @@ import { postgresMemory } from '../memory/postgres.js';
 import { knowledgeBaseService } from '../memory/knowledge-base.js';
 import { teamService } from '../teams/index.js';
 import { analyticsService } from '../analytics/index.js';
+import { llmOpsTelemetry } from '../analytics/llm-ops.js';
 import { Permission, hasPermission } from '../auth/permissions.js';
 export class ApiServer {
     routes = [];
@@ -81,6 +82,7 @@ export class ApiServer {
         this.addRoute('POST', '/api/approvals/:id/deny', this.handleDenyRequest.bind(this), true, P.TOOL_EXECUTE);
         // Health
         this.addRoute('GET', '/api/health', this.handleHealth.bind(this), false);
+        this.addRoute('GET', '/api/health/llm-ops', this.handleGetLlmOps.bind(this), false);
     }
     addRoute(method, path, handler, auth, permission) {
         const pattern = new RegExp('^' + path.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$');
@@ -563,6 +565,12 @@ export class ApiServer {
             status: 'healthy',
             timestamp: new Date().toISOString(),
             version: '1.0.0',
+        });
+    }
+    async handleGetLlmOps(ctx) {
+        this.sendJson(ctx.res, {
+            status: 'ok',
+            telemetry: llmOpsTelemetry.getSnapshot(),
         });
     }
 }

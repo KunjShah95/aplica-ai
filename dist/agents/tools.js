@@ -17,6 +17,7 @@ import { urlShortener } from '../tools/url-shortener.js';
 import { windowsTool } from '../tools/windows.js';
 import { auditLogger } from '../security/audit.js';
 import { sanitizeLogData } from '../security/encryption.js';
+import { liveCanvasManager } from '../canvas/live-canvas.js';
 function sanitizeToolPayload(payload) {
     try {
         const wrapped = sanitizeLogData({ value: payload });
@@ -249,6 +250,26 @@ export class ToolRegistry {
             if (!input.action)
                 throw new Error('action is required');
             return windowsTool.execute(input);
+        });
+        this.registerHandler('builtin:canvas_render', async (input) => {
+            const { canvasId, elements, action } = input;
+            const request = {
+                type: 'canvas_render',
+                payload: { canvasId, elements, action },
+            };
+            return liveCanvasManager.handleRenderRequest(request);
+        });
+        this.registerHandler('builtin:canvas_list', async () => {
+            return liveCanvasManager.listCanvases();
+        });
+        this.registerHandler('builtin:canvas_get', async (input) => {
+            const canvasId = input.canvasId;
+            if (!canvasId)
+                throw new Error('canvasId is required');
+            const canvas = liveCanvasManager.getCanvas(canvasId);
+            if (!canvas)
+                throw new Error('Canvas not found');
+            return { id: canvas.getId(), name: canvas.getName(), state: canvas.getState() };
         });
     }
     async register(tool) {
@@ -897,6 +918,70 @@ export class ToolRegistry {
                 },
                 handler: 'builtin:shorten_url',
                 category: 'utility',
+            },
+            {
+                name: 'canvas_render',
+                description: 'Render elements on a live canvas for the user to see',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        canvasId: {
+                            type: 'string',
+                            description: 'Canvas ID (optional, creates new if not provided)',
+                        },
+                        elements: {
+                            type: 'array',
+                            description: 'Array of canvas elements to create',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    elementType: {
+                                        type: 'string',
+                                        enum: ['text', 'button', 'input', 'chart', 'html', 'markdown'],
+                                    },
+                                    x: { type: 'number' },
+                                    y: { type: 'number' },
+                                    width: { type: 'number' },
+                                    height: { type: 'number' },
+                                    content: { type: 'string' },
+                                },
+                            },
+                        },
+                        action: {
+                            type: 'object',
+                            properties: {
+                                actionType: { type: 'string', enum: ['create', 'update', 'delete', 'clear'] },
+                                elementId: { type: 'string' },
+                                updates: { type: 'object', description: 'Updates to apply' },
+                            },
+                        },
+                    },
+                },
+                handler: 'builtin:canvas_render',
+                category: 'ui',
+            },
+            {
+                name: 'canvas_list',
+                description: 'List all active canvases',
+                schema: {
+                    type: 'object',
+                    properties: {},
+                },
+                handler: 'builtin:canvas_list',
+                category: 'ui',
+            },
+            {
+                name: 'canvas_get',
+                description: 'Get canvas state by ID',
+                schema: {
+                    type: 'object',
+                    properties: {
+                        canvasId: { type: 'string', description: 'Canvas ID to retrieve' },
+                    },
+                    required: ['canvasId'],
+                },
+                handler: 'builtin:canvas_get',
+                category: 'ui',
             },
         ];
         for (const tool of builtinTools) {

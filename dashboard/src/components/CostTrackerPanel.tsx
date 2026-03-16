@@ -7,7 +7,6 @@ import {
   Cpu,
   Users,
   Calendar,
-  ChevronDown,
 } from "lucide-react";
 
 interface ModelUsage {
@@ -57,20 +56,6 @@ const DEMO_USERS: UserUsage[] = [
   { userId: "user-2 (Alex)", costUsd: 0.56, tokens: 84200, sessions: 18 },
   { userId: "user-3 (Sam)", costUsd: 0.28, tokens: 41600, sessions: 9 },
 ];
-
-function MiniBarChart({ data, maxVal }: { data: number[]; maxVal: number }) {
-  return (
-    <div className="flex items-end gap-0.5 h-10">
-      {data.map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 bg-primary-500/60 rounded-sm min-h-[2px]"
-          style={{ height: `${Math.max(2, (v / maxVal) * 40)}px` }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function CostTrackerPanel() {
   const [period, setPeriod] = useState<"7d" | "14d" | "30d">("14d");

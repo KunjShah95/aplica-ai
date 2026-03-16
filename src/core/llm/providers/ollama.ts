@@ -54,7 +54,7 @@ export class OllamaProvider extends LLMProvider {
     options?: LLMCompletionOptions
   ): Promise<LLMCompletionResult> {
     const prompt = this.buildPrompt(messages);
-    const model = this.config.model || this.defaultModel;
+    const model = options?.model || this.config.model || this.defaultModel;
     const maxTokens = options?.maxTokens || this.config.maxTokens || 2048;
     const temperature = options?.temperature || this.config.temperature || 0.7;
 
@@ -90,7 +90,7 @@ export class OllamaProvider extends LLMProvider {
 
   async *stream(messages: LLMMessage[], options?: LLMCompletionOptions): AsyncIterable<string> {
     const prompt = this.buildPrompt(messages);
-    const model = this.config.model || this.defaultModel;
+    const model = options?.model || this.config.model || this.defaultModel;
     const maxTokens = options?.maxTokens || this.config.maxTokens || 2048;
     const temperature = options?.temperature || this.config.temperature || 0.7;
 

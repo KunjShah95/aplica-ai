@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../src/evolution/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,UAAU,EAAE,aAAa,EAAE,MAAM,sBAAsB,CAAC;AACvF,OAAO,EAAE,YAAY,EAAE,aAAa,EAAE,WAAW,EAAE,SAAS,EAAE,MAAM,qBAAqB,CAAC;AAC1F,OAAO,EAAE,eAAe,EAAE,eAAe,EAAE,cAAc,EAAE,MAAM,gBAAgB,CAAC;AAClF,OAAO,EAAE,mBAAmB,EAAE,eAAe,EAAE,eAAe,EAAE,MAAM,iBAAiB,CAAC"}

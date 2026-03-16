@@ -15,6 +15,7 @@ export class ClaudeProvider extends LLMProvider {
   async complete(messages: LLMMessage[], options?: LLMCompletionOptions): Promise<LLMCompletionResult> {
     const maxTokens = options?.maxTokens ?? this.config.maxTokens;
     const temperature = options?.temperature ?? this.config.temperature;
+    const model = options?.model ?? this.config.model;
 
     const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
 
@@ -24,7 +25,7 @@ export class ClaudeProvider extends LLMProvider {
     }));
 
     const response = await this.client.messages.create({
-      model: this.config.model,
+      model,
       max_tokens: maxTokens,
       temperature,
       system: systemPrompt,
@@ -46,6 +47,7 @@ export class ClaudeProvider extends LLMProvider {
   async *stream(messages: LLMMessage[], options?: LLMCompletionOptions): AsyncIterable<string> {
     const maxTokens = options?.maxTokens ?? this.config.maxTokens;
     const temperature = options?.temperature ?? this.config.temperature;
+    const model = options?.model ?? this.config.model;
 
     const systemPrompt = options?.systemPrompt || this.config.systemPrompt;
 
@@ -55,7 +57,7 @@ export class ClaudeProvider extends LLMProvider {
     }));
 
     const stream = await this.client.messages.create({
-      model: this.config.model,
+      model,
       max_tokens: maxTokens,
       temperature,
       system: systemPrompt,

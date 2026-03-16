@@ -3,20 +3,20 @@ export interface ToolDefinition {
     description: string;
     schema: {
         type: 'object';
-        properties: Record<string, {
-            type: string;
-            description?: string;
-            enum?: string[];
-            items?: {
-                type: string;
-            };
-            default?: unknown;
-        }>;
+        properties: Record<string, SchemaProperty>;
         required?: string[];
     };
     handler: string;
     category?: string;
     permissions?: string[];
+}
+interface SchemaProperty {
+    type: string;
+    description?: string;
+    enum?: string[];
+    items?: SchemaProperty | Record<string, SchemaProperty>;
+    default?: unknown;
+    properties?: Record<string, SchemaProperty>;
 }
 export interface ToolExecutionInput {
     toolId: string;

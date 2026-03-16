@@ -12,6 +12,8 @@ export interface AgentResponse {
     message: string;
     conversationId: string;
     tokensUsed: number;
+    model?: string;
+    routingTier?: string;
     timestamp: Date;
 }
 export interface ExecutionRequest {
@@ -28,7 +30,10 @@ export declare class Agent {
     constructor(options: AgentOptions);
     private setupWorkspaceContext;
     private buildSystemPrompt;
-    processMessage(content: string, conversationId: string, userId: string, source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp'): Promise<AgentResponse>;
+    processMessage(content: string, conversationId: string, userId: string, source: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp', options?: {
+        modelOverride?: string;
+        routingTier?: string;
+    }): Promise<AgentResponse>;
     private buildMessages;
     startConversation(userId: string, platform: 'telegram' | 'discord' | 'websocket' | 'cli' | 'signal' | 'googlechat' | 'msteams' | 'matrix' | 'webchat' | 'slack' | 'whatsapp', initialMessage?: string): Promise<{
         conversationId: string;
