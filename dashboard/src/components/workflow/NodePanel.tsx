@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   Zap,
   Play,
@@ -8,8 +8,12 @@ import {
   Repeat,
   GitFork,
   Plus,
-} from "lucide-react";
-import { NodeType } from "../../store/workflowStore";
+  Cpu,
+  Brain,
+  Workflow,
+  Sparkles,
+} from 'lucide-react';
+import { NodeType } from '../../store/workflowStore';
 
 interface NodePanelProps {
   onAddNode: (type: NodeType, position: [number, number]) => void;
@@ -22,122 +26,140 @@ const nodeTypes: {
   description: string;
 }[] = [
   {
-    type: "trigger",
-    label: "Trigger",
+    type: 'trigger',
+    label: 'Trigger',
     icon: <Zap className="w-5 h-5" />,
-    description: "Start workflow on events",
+    description: 'Start workflow on events',
   },
   {
-    type: "action",
-    label: "Action",
+    type: 'action',
+    label: 'Action',
     icon: <Play className="w-5 h-5" />,
-    description: "Perform an action",
+    description: 'Perform an action',
   },
   {
-    type: "condition",
-    label: "Condition",
+    type: 'condition',
+    label: 'Condition',
     icon: <GitBranch className="w-5 h-5" />,
-    description: "Branch based on logic",
+    description: 'Branch based on logic',
   },
   {
-    type: "transform",
-    label: "Transform",
+    type: 'transform',
+    label: 'Transform',
     icon: <ArrowRightLeft className="w-5 h-5" />,
-    description: "Transform data",
+    description: 'Transform data',
   },
   {
-    type: "agent",
-    label: "AI Agent",
+    type: 'agent',
+    label: 'AI Agent',
     icon: <Bot className="w-5 h-5" />,
-    description: "Use AI for tasks",
+    description: 'Use AI for tasks',
   },
   {
-    type: "loop",
-    label: "Loop",
+    type: 'loop',
+    label: 'Loop',
     icon: <Repeat className="w-5 h-5" />,
-    description: "Repeat steps",
+    description: 'Repeat steps',
   },
   {
-    type: "parallel",
-    label: "Parallel",
+    type: 'parallel',
+    label: 'Parallel',
     icon: <GitFork className="w-5 h-5" />,
-    description: "Run branches simultaneously",
+    description: 'Run branches simultaneously',
   },
 ];
 
-const colors: Record<NodeType, { bg: string; border: string; text: string }> = {
+const colors: Record<NodeType, { bg: string; border: string; text: string; glow: string }> = {
   trigger: {
-    bg: "bg-emerald-500/20",
-    border: "border-emerald-500/50",
-    text: "text-emerald-400",
+    bg: 'bg-neon-green/10',
+    border: 'border-neon-green/30',
+    text: 'text-neon-green',
+    glow: 'hover:shadow-[0_0_20px_rgba(57,255,20,0.3)]',
   },
   action: {
-    bg: "bg-blue-500/20",
-    border: "border-blue-500/50",
-    text: "text-blue-400",
+    bg: 'bg-neon-cyan/10',
+    border: 'border-neon-cyan/30',
+    text: 'text-neon-cyan',
+    glow: 'hover:shadow-[0_0_20px_rgba(0,245,255,0.3)]',
   },
   condition: {
-    bg: "bg-amber-500/20",
-    border: "border-amber-500/50",
-    text: "text-amber-400",
+    bg: 'bg-neon-amber/10',
+    border: 'border-neon-amber/30',
+    text: 'text-neon-amber',
+    glow: 'hover:shadow-[0_0_20px_rgba(255,190,11,0.3)]',
   },
   transform: {
-    bg: "bg-purple-500/20",
-    border: "border-purple-500/50",
-    text: "text-purple-400",
+    bg: 'bg-neon-purple/10',
+    border: 'border-neon-purple/30',
+    text: 'text-neon-purple',
+    glow: 'hover:shadow-[0_0_20px_rgba(176,38,255,0.3)]',
   },
   agent: {
-    bg: "bg-pink-500/20",
-    border: "border-pink-500/50",
-    text: "text-pink-400",
+    bg: 'bg-neon-magenta/10',
+    border: 'border-neon-magenta/30',
+    text: 'text-neon-magenta',
+    glow: 'hover:shadow-[0_0_20px_rgba(255,0,255,0.3)]',
   },
   loop: {
-    bg: "bg-cyan-500/20",
-    border: "border-cyan-500/50",
-    text: "text-cyan-400",
+    bg: 'bg-neon-pink/10',
+    border: 'border-neon-pink/30',
+    text: 'text-neon-pink',
+    glow: 'hover:shadow-[0_0_20px_rgba(255,7,58,0.3)]',
   },
   parallel: {
-    bg: "bg-orange-500/20",
-    border: "border-orange-500/50",
-    text: "text-orange-400",
+    bg: 'bg-indigo-500/10',
+    border: 'border-indigo-500/30',
+    text: 'text-indigo-400',
+    glow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]',
   },
 };
 
 export default function NodePanel({ onAddNode }: NodePanelProps) {
   return (
-    <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
-      <div className="p-4 border-b border-slate-700">
-        <h2 className="text-lg font-semibold text-white">Add Nodes</h2>
-        <p className="text-sm text-slate-400 mt-1">Drag or click to add</p>
+    <div className="w-72 bg-dark-900/80 backdrop-blur-xl border-r border-glass-border flex flex-col">
+      <div className="p-5 border-b border-glass-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-cyan to-neon-purple flex items-center justify-center">
+            <Workflow className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-display font-semibold text-white">Add Nodes</h2>
+            <p className="text-xs text-slate-400">Click to add to canvas</p>
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {nodeTypes.map(({ type, label, icon, description }) => (
           <button
             key={type}
             onClick={() => onAddNode(type, [100, 100])}
             className={`
-              w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200
+              w-full flex items-center gap-3 p-4 rounded-xl border transition-all duration-300
               ${colors[type].bg}
               ${colors[type].border}
-              hover:ring-2 hover:ring-primary-500/50
+              ${colors[type].glow}
+              hover:translate-x-1
             `}
           >
-            <div className={colors[type].text}>{icon}</div>
+            <div className={`${colors[type].text} p-2 rounded-lg bg-dark-800/50`}>{icon}</div>
             <div className="flex-1 text-left">
-              <div className={`font-medium text-sm ${colors[type].text}`}>
+              <div className={`font-display font-semibold text-sm ${colors[type].text}`}>
                 {label}
               </div>
-              <div className="text-xs text-slate-400">{description}</div>
+              <div className="text-xs text-slate-500 mt-0.5">{description}</div>
             </div>
-            <Plus className="w-4 h-4 text-slate-400" />
+            <Plus className={`w-5 h-5 ${colors[type].text} opacity-50`} />
           </button>
         ))}
       </div>
 
-      <div className="p-4 border-t border-slate-700">
-        <div className="text-xs text-slate-500">
-          💡 Tip: Click a node to configure its properties
+      <div className="p-4 border-t border-glass-border">
+        <div className="glass-card p-3 flex items-start gap-2">
+          <Sparkles className="w-4 h-4 text-neon-amber mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-slate-400">
+            <span className="text-neon-amber">Tip:</span> Click a node to configure its properties
+          </p>
         </div>
       </div>
     </div>
