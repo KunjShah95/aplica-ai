@@ -707,3 +707,250 @@ curl -X POST http://localhost:3000/api/conversations \
   -H "Content-Type: application/json" \
   -d '{"title": "New Chat"}'
 ```
+
+---
+
+## Evolution Endpoints
+
+### Run Prompt Evolution
+
+```http
+POST /api/evolution/prompts
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "initialPrompt": "You are a helpful assistant...",
+  "generations": 50
+}
+```
+
+**Response:**
+
+```json
+{
+  "bestVariant": {
+    "id": "variant-uuid",
+    "fullPrompt": "Evolved prompt...",
+    "fitness": 0.85
+  },
+  "generation": 50
+}
+```
+
+### Breed Skills
+
+```http
+POST /api/evolution/breed
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "skillA": "browser",
+  "skillB": "shell"
+}
+```
+
+---
+
+## World Hooks Endpoints
+
+### Start Patent Watch
+
+```http
+POST /api/world-hooks/patents
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "keywords": ["machine learning", "neural network"],
+  "minRelevanceScore": 0.5
+}
+```
+
+### Get Grant Opportunities
+
+```http
+GET /api/world-hooks/grants?keywords=AI,SaaS
+Authorization: Bearer <token>
+```
+
+### Get Regulatory Changes
+
+```http
+GET /api/world-hooks/regulatory?sources=govinfo,eur-lex
+Authorization: Bearer <token>
+```
+
+---
+
+## Analytics Endpoints
+
+### Run Causal Analysis
+
+```http
+POST /api/analytics/causal
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "analysisType": "diff-in-diff",
+  "treatmentGroup": "treatment",
+  "controlGroup": "control",
+  "prePeriod": "pre",
+  "postPeriod": "post",
+  "outcomeVar": "conversion"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "analysis-uuid",
+  "treatmentEffect": 0.05,
+  "confidenceInterval": [0.03, 0.07],
+  "pValue": 0.001,
+  "plainEnglishStory": "The treatment caused a 5% increase..."
+}
+```
+
+### Create Experiment
+
+```http
+POST /api/analytics/experiments
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "New Checkout Flow",
+  "hypothesis": "Simplified checkout increases conversion",
+  "currentBaseline": 0.03,
+  "expectedImprovement": 0.005
+}
+```
+
+---
+
+## Execution Endpoints
+
+### Execute in Sandbox
+
+```http
+POST /api/execution/sandbox
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "code": "return data.map(x => x * 2)",
+  "language": "javascript",
+  "input": { "data": [1, 2, 3] }
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "exec-uuid",
+  "success": true,
+  "output": "[2, 4, 6]",
+  "executionTime": 45
+}
+```
+
+### Git Autopilot
+
+```http
+POST /api/execution/git/commit
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "message": "feat: add new feature",
+  "autoPush": true,
+  "autoPR": true
+}
+```
+
+---
+
+## Second Brain Endpoints
+
+### Sync Vault
+
+```http
+POST /api/memory/second-brain/sync
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "vaultPath": "/path/to/obsidian/vault",
+  "bidirectional": true
+}
+```
+
+### Find Relevant Notes
+
+```http
+POST /api/memory/second-brain/relevant
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "query": "authentication implementation",
+  "conversationContext": "Discussing OAuth"
+}
+```
+
+---
+
+## Legacy Letter Endpoints
+
+### Get Reflection Question
+
+```http
+GET /api/legacy/reflection
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "id": "question-uuid",
+  "question": "What are the three accomplishments you are most proud of?",
+  "category": "achievements"
+}
+```
+
+### Submit Reflection
+
+```http
+POST /api/legacy/reflection
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "questionId": "question-uuid",
+  "response": "Building this AI assistant, raising my children, learning to code..."
+}
+```
+
+### Check Legacy Status
+
+```http
+GET /api/legacy/status
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "lastActivity": "2026-03-16T10:00:00Z",
+  "daysSinceActivity": 5,
+  "reflectionsCount": 42,
+  "narrativeSections": 5
+}
+```
