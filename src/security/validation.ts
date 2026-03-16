@@ -166,13 +166,6 @@ export const schemas = {
             required: true,
             type: 'string' as const,
             minLength: 8,
-            custom: (v: unknown) => {
-                if (typeof v !== 'string') return false;
-                if (!/[A-Z]/.test(v)) return 'Password must contain uppercase letter';
-                if (!/[a-z]/.test(v)) return 'Password must contain lowercase letter';
-                if (!/[0-9]/.test(v)) return 'Password must contain number';
-                return true;
-            }
         },
         username: {
             required: true,
@@ -232,7 +225,8 @@ export const schemas = {
     },
 };
 
-export function sanitizeInput(input: string): string {
+export function sanitizeInput(input: string | null | undefined): string {
+    if (input == null) return '';
     return input
         .replace(/[<>]/g, '')
         .replace(/javascript:/gi, '')
@@ -241,18 +235,47 @@ export function sanitizeInput(input: string): string {
 }
 
 export function sanitizeHTML(html: string): string {
-    const allowedTags = ['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'code', 'pre'];
-    const tagPattern = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
+    const allowedTags = new Set(['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'code', 'pre']);
+    // Attributes allowed on specific tags (strict allowlist)
+    const allowedAttrs: Record<string, Set<string>> = {
+        a: new Set(['href', 'title']),
+    };
 
-    return html.replace(tagPattern, (match, tagName) => {
-        if (allowedTags.includes(tagName.toLowerCase())) {
-            if (tagName.toLowerCase() === 'a') {
-                return match.replace(/\s+on\w+\s*=/gi, ' ');
+    const entityMap: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    };
+
+    // Escape all HTML entities first, then restore allowed tags with stripped attributes
+    return html
+        .replace(/[&<>"']/g, (char) => entityMap[char] ?? char)
+        .replace(/&lt;(\/?)([\w-]+)([^]*?)&gt;/g, (match, slash, tagName, rawAttrs) => {
+            const lowerTag = tagName.toLowerCase();
+            if (allowedTags.has(lowerTag)) {
+                const permittedAttrs = allowedAttrs[lowerTag];
+                let safeAttrs = '';
+                if (permittedAttrs && rawAttrs) {
+                    // Only keep explicitly allowlisted attributes; filter out all others
+                    const attrPattern = /\s+([\w-]+)\s*=\s*(?:&quot;([^&]*)&quot;|&#39;([^&]*)&#39;|(\S+))/gi;
+                    let m: RegExpExecArray | null;
+                    while ((m = attrPattern.exec(rawAttrs)) !== null) {
+                        const attrName = m[1].toLowerCase();
+                        const attrValue = m[2] ?? m[3] ?? m[4] ?? '';
+                        if (
+                            permittedAttrs.has(attrName) &&
+                            !/^javascript:/i.test(attrValue)
+                        ) {
+                            safeAttrs += ` ${attrName}="&quot;${attrValue}&quot;"`;
+                        }
+                    }
+                }
+                return `<${slash}${lowerTag}${safeAttrs}>`;
             }
             return match;
-        }
-        return '';
-    });
+        });
 }
 
 export function escapeSQL(value: string): string {

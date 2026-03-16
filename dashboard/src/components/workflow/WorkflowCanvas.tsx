@@ -11,7 +11,7 @@ import ReactFlow, {
   Node,
   BackgroundVariant,
   Panel,
-} from "@reactflow/core";
+} from "reactflow";
 import { useWorkflowStore, NodeType } from "../../store/workflowStore";
 import WorkflowNode from "./WorkflowNode";
 

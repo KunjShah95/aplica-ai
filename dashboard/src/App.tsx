@@ -16,12 +16,18 @@ import {
   Sun,
   Globe,
   Smartphone,
+  Activity,
+  History,
+  DollarSign,
 } from "lucide-react";
 import WorkflowCanvas from "./components/workflow/WorkflowCanvas";
 import NodePanel from "./components/workflow/NodePanel";
 import NodeConfigPanel from "./components/workflow/NodeConfigPanel";
 import WorkflowToolbar from "./components/workflow/WorkflowToolbar";
 import TemplateGallery from "./components/workflow/TemplateGallery";
+import AgentTrace from "./components/AgentTrace";
+import TaskHistory from "./components/TaskHistory";
+import CostTrackerPanel from "./components/CostTrackerPanel";
 import { useWorkflowStore, NodeType } from "./store/workflowStore";
 
 type Tab =
@@ -29,6 +35,9 @@ type Tab =
   | "templates"
   | "deploy"
   | "analytics"
+  | "trace"
+  | "history"
+  | "costs"
   | "team"
   | "settings";
 
@@ -75,6 +84,21 @@ function App() {
       id: "analytics",
       label: "Analytics",
       icon: <BarChart3 className="w-5 h-5" />,
+    },
+    {
+      id: "trace",
+      label: "Agent Trace",
+      icon: <Activity className="w-5 h-5" />,
+    },
+    {
+      id: "history",
+      label: "Task History",
+      icon: <History className="w-5 h-5" />,
+    },
+    {
+      id: "costs",
+      label: "Cost Tracker",
+      icon: <DollarSign className="w-5 h-5" />,
     },
     { id: "team", label: "Team", icon: <Users className="w-5 h-5" /> },
     {
@@ -232,6 +256,12 @@ function App() {
             <DeployPanel />
           ) : activeTab === "analytics" ? (
             <AnalyticsPanel />
+          ) : activeTab === "trace" ? (
+            <AgentTrace />
+          ) : activeTab === "history" ? (
+            <TaskHistory />
+          ) : activeTab === "costs" ? (
+            <CostTrackerPanel />
           ) : activeTab === "team" ? (
             <TeamPanel />
           ) : activeTab === "settings" ? (
