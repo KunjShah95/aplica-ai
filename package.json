@@ -8,6 +8,7 @@
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
+    "dev:tui": "tsx src/cli/tui.ts",
     "dev:cli": "tsx src/index.ts cli",
     "dev:api": "tsx src/index.ts api",
     "dev:dashboard": "tsx src/index.ts dashboard",

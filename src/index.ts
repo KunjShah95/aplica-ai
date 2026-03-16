@@ -51,6 +51,13 @@ async function main(): Promise<void> {
       const config = await configLoader.load(); // Load strictly for services
     }
 
+    // TUI logic (no DB required)
+    if (process.argv[2] === 'tui') {
+      const { startTUI } = await import('./cli/tui.js');
+      await startTUI();
+      return;
+    }
+
     // Dashboard logic
     if (process.argv[2] === 'dashboard') {
       const { startInteractiveDashboard } = await import('./cli/dashboard-interactive.js');
