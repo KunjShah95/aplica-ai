@@ -236,6 +236,10 @@ export function sanitizeInput(input: string | null | undefined): string {
 
 export function sanitizeHTML(html: string): string {
     const allowedTags = new Set(['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'code', 'pre']);
+    // Attributes allowed on specific tags (strict allowlist)
+    const allowedAttrs: Record<string, Set<string>> = {
+        a: new Set(['href', 'title']),
+    };
 
     const entityMap: Record<string, string> = {
         '&': '&amp;',
@@ -245,13 +249,30 @@ export function sanitizeHTML(html: string): string {
         "'": '&#39;',
     };
 
-    // Escape all HTML entities first, then restore allowed tags (stripping dangerous attributes)
+    // Escape all HTML entities first, then restore allowed tags with stripped attributes
     return html
         .replace(/[&<>"']/g, (char) => entityMap[char] ?? char)
         .replace(/&lt;(\/?)([\w-]+)([^]*?)&gt;/g, (match, slash, tagName, rawAttrs) => {
-            if (allowedTags.has(tagName.toLowerCase())) {
-                const safeAttrs = rawAttrs.replace(/\s+on\w+\s*=\s*(?:&quot;[^&]*&quot;|&#39;[^&]*&#39;|\S+)/gi, '');
-                return `<${slash}${tagName}${safeAttrs}>`;
+            const lowerTag = tagName.toLowerCase();
+            if (allowedTags.has(lowerTag)) {
+                const permittedAttrs = allowedAttrs[lowerTag];
+                let safeAttrs = '';
+                if (permittedAttrs && rawAttrs) {
+                    // Only keep explicitly allowlisted attributes; filter out all others
+                    const attrPattern = /\s+([\w-]+)\s*=\s*(?:&quot;([^&]*)&quot;|&#39;([^&]*)&#39;|(\S+))/gi;
+                    let m: RegExpExecArray | null;
+                    while ((m = attrPattern.exec(rawAttrs)) !== null) {
+                        const attrName = m[1].toLowerCase();
+                        const attrValue = m[2] ?? m[3] ?? m[4] ?? '';
+                        if (
+                            permittedAttrs.has(attrName) &&
+                            !/^javascript:/i.test(attrValue)
+                        ) {
+                            safeAttrs += ` ${attrName}="&quot;${attrValue}&quot;"`;
+                        }
+                    }
+                }
+                return `<${slash}${lowerTag}${safeAttrs}>`;
             }
             return match;
         });
