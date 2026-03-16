@@ -11,7 +11,7 @@ import {
   OnConnect,
   applyNodeChanges,
   applyEdgeChanges,
-} from "@reactflow/core";
+} from "reactflow";
 
 export type NodeType =
   | "trigger"

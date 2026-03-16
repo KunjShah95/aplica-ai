@@ -126,7 +126,7 @@ describe('Masking functions', () => {
         it('should mask data with default settings', () => {
             const result = maskSensitiveData('secretvalue123');
             expect(result.startsWith('secr')).toBe(true);
-            expect(result.endsWith('t123')).toBe(true);
+            expect(result.endsWith('e123')).toBe(true);
             expect(result).toContain('*');
         });
 

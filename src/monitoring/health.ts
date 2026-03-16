@@ -19,11 +19,11 @@ export interface HealthStatus {
 export class HealthService {
     private checks: Map<string, HealthCheck> = new Map();
     private version: string;
-    private startTime: Date;
+    private startTimeHr: bigint;
 
     constructor(version: string = '1.0.0') {
         this.version = version;
-        this.startTime = new Date();
+        this.startTimeHr = process.hrtime.bigint();
         this.registerDefaultChecks();
     }
 
@@ -120,7 +120,7 @@ export class HealthService {
             status,
             timestamp: new Date().toISOString(),
             version: this.version,
-            uptime: (Date.now() - this.startTime.getTime()) / 1000,
+            uptime: Number(process.hrtime.bigint() - this.startTimeHr) / 1e9,
             checks: results,
         };
     }

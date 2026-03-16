@@ -135,7 +135,7 @@ export function maskEmail(email: string): string {
     if (!domain) return maskSensitiveData(email);
 
     const maskedLocal = local.length > 2
-        ? local[0] + '*'.repeat(local.length - 2) + local[local.length - 1]
+        ? local[0] + '*' + local[local.length - 1]
         : '*'.repeat(local.length);
 
     return `${maskedLocal}@${domain}`;
@@ -143,7 +143,7 @@ export function maskEmail(email: string): string {
 
 export function maskApiKey(key: string): string {
     if (key.length <= 8) return '*'.repeat(key.length);
-    return key.slice(0, 4) + '*'.repeat(key.length - 8) + key.slice(-4);
+    return key.slice(0, 4) + '*'.repeat(10) + key.slice(-4);
 }
 
 export function sanitizeHeaders(

@@ -2,6 +2,20 @@ export { JSONLStore, jsonlStore } from './jsonl.js';
 export { MarkdownMemory, markdownMemory } from './markdown.js';
 export { SQLiteMemory, sqliteMemory } from './sqlite.js';
 export { PostgresMemory, postgresMemory } from './postgres.js';
+export {
+  UserPreferenceLearner,
+  userPreferenceLearner,
+  type UserPreference,
+  type UserProfile,
+  type PreferenceObservation,
+} from './user-preferences.js';
+export {
+  EpisodicSummarizer,
+  episodicSummarizer,
+  type EpisodicMemory,
+  type SummarizedEpisode,
+  type SummarizationConfig,
+} from './episodic-summarizer.js';
 
 import { jsonlStore, MemoryEntry, MemoryMetadata } from './jsonl.js';
 import { markdownMemory, MarkdownNote, DailyLog, LogEntry } from './markdown.js';

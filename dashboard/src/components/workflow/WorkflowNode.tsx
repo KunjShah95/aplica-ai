@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Handle, Position, NodeProps } from "@reactflow/core";
+import { Handle, Position, NodeProps } from "reactflow";
 import {
   Zap,
   Play,
