@@ -31,6 +31,9 @@ import {
   BookOpen,
   Search,
   Command,
+  Briefcase,
+  Bell,
+  Sliders,
 } from 'lucide-react';
 import WorkflowCanvas from './components/workflow/WorkflowCanvas';
 import NodePanel from './components/workflow/NodePanel';
@@ -45,6 +48,11 @@ import AgentChat from './components/AgentChat';
 import QuickLauncher from './components/QuickLauncher';
 import KnowledgeBase from './components/KnowledgeBase';
 import TitleBar from './components/TitleBar';
+import AutoApply from './components/AutoApply';
+import BrowserAgent from './components/BrowserAgent';
+import MemoryBrowser from './components/MemoryBrowser';
+import NotificationsCenter from './components/NotificationsCenter';
+import AppSettingsPanel from './components/AppSettingsPanel';
 import { useWorkflowStore, NodeType } from './store/workflowStore';
 
 type Tab =
@@ -60,7 +68,12 @@ type Tab =
   | 'research'
   | 'chat'
   | 'launcher'
-  | 'knowledge';
+  | 'knowledge'
+  | 'autoapply'
+  | 'browser'
+  | 'memory'
+  | 'notifications'
+  | 'app-settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('workflow');
@@ -131,6 +144,11 @@ function App() {
     { id: 'chat', label: 'Agent Chat', icon: <MessageSquare className="w-5 h-5" />, section: 'ai' },
     { id: 'knowledge', label: 'Knowledge', icon: <BookOpen className="w-5 h-5" />, section: 'ai' },
     { id: 'launcher', label: 'Launcher', icon: <Command className="w-5 h-5" />, section: 'ai' },
+    // Tools
+    { id: 'autoapply', label: 'Auto Apply', icon: <Briefcase className="w-5 h-5" />, section: 'tools' },
+    { id: 'browser', label: 'Browser Agent', icon: <Globe className="w-5 h-5" />, section: 'tools' },
+    { id: 'memory', label: 'Memory', icon: <Brain className="w-5 h-5" />, section: 'tools' },
+    { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" />, section: 'tools' },
     // Monitoring
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" />, section: 'monitor' },
     { id: 'trace', label: 'Agent Trace', icon: <Activity className="w-5 h-5" />, section: 'monitor' },
@@ -139,6 +157,7 @@ function App() {
     // Admin
     { id: 'team', label: 'Team', icon: <Users className="w-5 h-5" />, section: 'admin' },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" />, section: 'admin' },
+    { id: 'app-settings', label: 'App Settings', icon: <Sliders className="w-5 h-5" />, section: 'admin' },
   ];
 
   if (showTemplateGallery) {
@@ -227,26 +246,35 @@ function App() {
         </div>
 
         <div className="flex-1 py-3 flex flex-col items-center gap-1 overflow-y-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`p-3.5 rounded-xl transition-all duration-300 group relative ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-neon-cyan/20 to-neon-purple/20 text-neon-cyan shadow-[0_0_20px_rgba(0,245,255,0.2)]'
-                  : 'text-slate-500 hover:text-neon-cyan hover:bg-dark-700/50'
-              }`}
-              title={tab.label}
-            >
-              {tab.icon}
-              {activeTab === tab.id && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-neon-cyan to-neon-magenta rounded-r-full shadow-[0_0_10px_var(--neon-cyan)]" />
-              )}
-              <span className="absolute left-full ml-3 px-2 py-1 bg-dark-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                {tab.label}
-              </span>
-            </button>
-          ))}
+          {tabs.reduce<React.ReactNode[]>((acc, tab, idx) => {
+            const prevSection = idx > 0 ? tabs[idx - 1].section : null;
+            if (tab.section && tab.section !== prevSection && idx > 0) {
+              acc.push(
+                <div key={`div-${tab.section}`} className="w-8 h-px bg-glass-border my-1" />
+              );
+            }
+            acc.push(
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`p-3.5 rounded-xl transition-all duration-300 group relative ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-neon-cyan/20 to-neon-purple/20 text-neon-cyan shadow-[0_0_20px_rgba(0,245,255,0.2)]'
+                    : 'text-slate-500 hover:text-neon-cyan hover:bg-dark-700/50'
+                }`}
+                title={tab.label}
+              >
+                {tab.icon}
+                {activeTab === tab.id && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-neon-cyan to-neon-magenta rounded-r-full shadow-[0_0_10px_var(--neon-cyan)]" />
+                )}
+                <span className="absolute left-full ml-3 px-2 py-1 bg-dark-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                  {tab.label}
+                </span>
+              </button>
+            );
+            return acc;
+          }, [])}
         </div>
 
         <div className="p-4 border-t border-glass-border flex flex-col gap-2">
@@ -375,6 +403,16 @@ function App() {
                 </div>
               </div>
             </div>
+          ) : activeTab === 'autoapply' ? (
+            <AutoApply />
+          ) : activeTab === 'browser' ? (
+            <BrowserAgent />
+          ) : activeTab === 'memory' ? (
+            <MemoryBrowser />
+          ) : activeTab === 'notifications' ? (
+            <NotificationsCenter />
+          ) : activeTab === 'app-settings' ? (
+            <AppSettingsPanel />
           ) : (
             <TemplateGallery onSelectTemplate={handleSelectTemplate} />
           )}

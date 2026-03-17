@@ -18,6 +18,9 @@ import {
   ArrowRight,
   Command,
   X,
+  Briefcase,
+  Bell,
+  Sliders,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -155,6 +158,52 @@ export default function QuickLauncher({ onNavigate, overlay = false }: QuickLaun
       category: 'navigation',
       action: () => navigate('team'),
       keywords: ['team', 'members', 'permissions', 'roles', 'users'],
+    },
+    {
+      id: 'nav-autoapply',
+      label: 'Auto Apply',
+      description: 'AI-powered job application automation',
+      icon: <Briefcase className="w-4 h-4" />,
+      category: 'navigation',
+      shortcut: '⌘J',
+      action: () => navigate('autoapply'),
+      keywords: ['apply', 'job', 'application', 'career', 'resume', 'cover letter'],
+    },
+    {
+      id: 'nav-browser',
+      label: 'Browser Agent (NanoClaw)',
+      description: 'Headless web automation and scraping',
+      icon: <Globe className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('browser'),
+      keywords: ['browser', 'nanoclaw', 'web', 'scrape', 'automation', 'navigate'],
+    },
+    {
+      id: 'nav-memory',
+      label: 'Memory Browser',
+      description: 'Explore and manage agent memories',
+      icon: <Brain className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('memory'),
+      keywords: ['memory', 'episodic', 'semantic', 'recall', 'history', 'agent'],
+    },
+    {
+      id: 'nav-notifications',
+      label: 'Notifications',
+      description: 'View alerts and system notifications',
+      icon: <Bell className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('notifications'),
+      keywords: ['notifications', 'alerts', 'bell', 'messages', 'updates'],
+    },
+    {
+      id: 'nav-app-settings',
+      label: 'App Settings',
+      description: 'API keys, models, appearance and more',
+      icon: <Sliders className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('app-settings'),
+      keywords: ['settings', 'api', 'keys', 'models', 'appearance', 'shortcuts', 'privacy'],
     },
     // Agent commands
     {
