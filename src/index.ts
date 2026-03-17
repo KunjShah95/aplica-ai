@@ -1,20 +1,15 @@
 #!/usr/bin/env node
+// Only import what is needed before mode detection.
+// Heavy modules (DB, gateway, plugins, etc.) are loaded dynamically inside
+// main() so that PrismaClient and other singletons are NEVER constructed when
+// running in CLI/TUI mode.
 import { configLoader } from './config/loader.js';
-import { GatewayServer } from './gateway/index.js';
-import { connectDatabase, disconnectDatabase } from './db/index.js';
-import { apiServer } from './api/server.js';
-import { pluginManager } from './plugins/index.js';
-import { postgresMemory } from './memory/postgres.js';
-import { createEmbeddingProvider } from './memory/embeddings.js';
-import { scheduler } from './workflows/index.js';
-import { personaService, toolRegistry } from './agents/index.js';
 
 const mode = process.argv[2];
 
 // ── CLI / TUI mode ─────────────────────────────────────────────────────────────
-// Bug fix: the TUI must NOT connect to the database.  It is a lightweight
-// interactive interface that relies solely on the in-memory ConversationManager
-// and the configured LLM provider.
+// Short-circuit before any DB or service initialisation so that PrismaClient
+// is never instantiated during an interactive terminal session.
 if (mode === 'cli' || mode === 'tui') {
   (async () => {
     try {
@@ -34,6 +29,17 @@ if (mode === 'cli' || mode === 'tui') {
 }
 
 async function main(): Promise<void> {
+  // Dynamic imports ensure these modules (and their module-level side-effects
+  // such as `new PrismaClient()`) are only evaluated when actually needed.
+  const { connectDatabase, disconnectDatabase } = await import('./db/index.js');
+  const { GatewayServer } = await import('./gateway/index.js');
+  const { apiServer } = await import('./api/server.js');
+  const { pluginManager } = await import('./plugins/index.js');
+  const { postgresMemory } = await import('./memory/postgres.js');
+  const { createEmbeddingProvider } = await import('./memory/embeddings.js');
+  const { scheduler } = await import('./workflows/index.js');
+  const { personaService, toolRegistry } = await import('./agents/index.js');
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('  Alpicia - AI Personal Assistant');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

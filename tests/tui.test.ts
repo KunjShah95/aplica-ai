@@ -1,10 +1,23 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { safeTerminalWidth, renderMarkdown } from '../src/tui/markdown.js';
 
 describe('TUI helpers', () => {
   describe('safeTerminalWidth', () => {
+    let originalDescriptor: PropertyDescriptor | undefined;
+
+    beforeEach(() => {
+      originalDescriptor = Object.getOwnPropertyDescriptor(process.stdout, 'columns');
+    });
+
     afterEach(() => {
-      vi.restoreAllMocks();
+      // Restore the original property descriptor to prevent leaking between tests.
+      if (originalDescriptor !== undefined) {
+        Object.defineProperty(process.stdout, 'columns', originalDescriptor);
+      } else {
+        // Property didn't exist originally – delete any value we set.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (process.stdout as any).columns;
+      }
     });
 
     it('returns columns when process.stdout.columns is defined', () => {
@@ -79,6 +92,13 @@ describe('TUI helpers', () => {
       expect(result).toContain('• item two');
     });
 
+    it('renders numbered list without double indentation', () => {
+      const result = renderMarkdown('1. first\n2. second');
+      // Should not have double spaces before the number
+      expect(result).toContain('1. ');
+      expect(result).not.toMatch(/^\s{2,}1\./m);
+    });
+
     it('renders inline code with reverse-video ANSI', () => {
       const result = renderMarkdown('Use `npm install` to install');
       expect(result).toContain('\x1b[7m');
@@ -97,6 +117,12 @@ describe('TUI helpers', () => {
         writable: true,
       });
       expect(() => renderMarkdown('---')).not.toThrow();
+      // Restore immediately so this test doesn't affect others
+      Object.defineProperty(process.stdout, 'columns', {
+        value: originalColumns,
+        configurable: true,
+        writable: true,
+      });
     });
 
     it('renders empty string without throwing', () => {
@@ -104,3 +130,6 @@ describe('TUI helpers', () => {
     });
   });
 });
+
+// Capture the original columns value at module level for the inline restore above.
+const originalColumns = process.stdout.columns;

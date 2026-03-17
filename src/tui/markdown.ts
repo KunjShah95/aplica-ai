@@ -46,10 +46,10 @@ export function renderMarkdown(text: string): string {
       continue;
     }
 
-    // Numbered lists
-    const numbered = line.match(/^(\s*)\d+\.\s+(.*)/);
+    // Numbered lists – capture the full prefix (indent + number + '. ') as one group
+    const numbered = line.match(/^(\s*\d+\.\s+)(.*)/);
     if (numbered) {
-      out.push(numbered[1] + line.replace(/^(\s*\d+\.\s+)(.*)/, '$1') + applyInline(numbered[2]));
+      out.push(numbered[1] + applyInline(numbered[2]));
       continue;
     }
 

@@ -131,6 +131,8 @@ async function runInteractive(agent: Agent, conversationId: string): Promise<voi
 // ─── Piped (non-TTY) mode ─────────────────────────────────────────────────────
 // Bug #2: when stdin is not a TTY, process each line as a separate query and
 // print the response, then exit.  This prevents the process from hanging.
+// Each line is processed as it arrives so output streams immediately and
+// memory usage stays bounded for large inputs.
 async function runPiped(agent: Agent, conversationId: string): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
@@ -138,18 +140,11 @@ async function runPiped(agent: Agent, conversationId: string): Promise<void> {
     terminal: false,     // crucial: prevents readline from treating stdin as a TTY
   });
 
-  const lines: string[] = [];
-
   for await (const line of rl) {
     const trimmed = line.trim();
-    if (trimmed) {
-      lines.push(trimmed);
-    }
-  }
-
-  for (const query of lines) {
+    if (!trimmed) continue;
     try {
-      const response = await agent.processMessage(query, conversationId, 'cli-user', 'cli');
+      const response = await agent.processMessage(trimmed, conversationId, 'cli-user', 'cli');
       process.stdout.write(response.message + '\n');
     } catch (err) {
       process.stderr.write('Error: ' + (err instanceof Error ? err.message : String(err)) + '\n');
