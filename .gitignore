@@ -6,4 +6,8 @@ node_modules
 .env
 *.md
 dashboard/dist
+dashboard/dist-electron
+dashboard/release
 dashboard/node_modules
+tui/node_modules
+tui/dist
