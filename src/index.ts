@@ -9,6 +9,30 @@ import { createEmbeddingProvider } from './memory/embeddings.js';
 import { scheduler } from './workflows/index.js';
 import { personaService, toolRegistry } from './agents/index.js';
 
+const mode = process.argv[2];
+
+// ── CLI / TUI mode ─────────────────────────────────────────────────────────────
+// Bug fix: the TUI must NOT connect to the database.  It is a lightweight
+// interactive interface that relies solely on the in-memory ConversationManager
+// and the configured LLM provider.
+if (mode === 'cli' || mode === 'tui') {
+  (async () => {
+    try {
+      const config = await configLoader.load();
+      const { runCLI } = await import('./tui/index.js');
+      await runCLI(config);
+    } catch (error) {
+      console.error(
+        'Failed to start CLI:',
+        error instanceof Error ? error.message : String(error)
+      );
+      process.exit(1);
+    }
+  })();
+} else {
+  main();
+}
+
 async function main(): Promise<void> {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('  Alpicia - AI Personal Assistant');
@@ -47,7 +71,7 @@ async function main(): Promise<void> {
 
     console.log('[6/6] Starting services...');
 
-    if (process.argv[2] === 'api') {
+    if (mode === 'api') {
       console.log('      Mode: API Server\n');
       await apiServer.start();
       await scheduler.start();
@@ -83,5 +107,3 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 }
-
-main();
