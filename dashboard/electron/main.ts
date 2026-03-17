@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +21,7 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
     title: 'Aplica AI',
     backgroundColor: '#0a0a0a',
@@ -36,7 +36,8 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:3001');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // Load the app with a hash so the renderer router lands on the main view
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '#dashboard' });
   }
 
   // Open external links in the default browser, not inside Electron
@@ -135,7 +136,10 @@ app.on('window-all-closed', () => {
 // Security: prevent navigation to unknown origins
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
-    const allowedPrefixes = ['http://localhost:3001', 'file://'];
+    // In dev, allow Vite dev server; in production, allow only the packaged dist
+    const allowedPrefixes = isDev
+      ? ['http://localhost:3001']
+      : [pathToFileURL(path.join(app.getAppPath(), 'dist')).href];
     if (!allowedPrefixes.some((prefix) => url.startsWith(prefix))) {
       event.preventDefault();
     }

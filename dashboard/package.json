@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:build-main": "tsc -p electron/tsconfig.json",
-    "electron:dev": "concurrently --kill-others \"npm run dev\" \"wait-on http://localhost:3001 && cross-env NODE_ENV=development electron .\"",
+    "electron:dev:launch": "wait-on http://localhost:3001 file:./dist-electron/main.js && cross-env NODE_ENV=development electron .",
+    "electron:dev": "concurrently --kill-others \"npm run dev\" \"tsc -p electron/tsconfig.json --watch\" \"npm run electron:dev:launch\"",
     "electron:build": "npm run build && npm run electron:build-main && electron-builder",
     "electron:build:win": "npm run build && npm run electron:build-main && electron-builder --win"
   },
@@ -42,8 +43,7 @@
             "x64"
           ]
         }
-      ],
-      "icon": "build/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -56,12 +56,10 @@
       "shortcutName": "Aplica AI"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "build/icon.icns"
+      "target": "dmg"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "build/icon.png",
       "category": "Utility"
     }
   },
