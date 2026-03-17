@@ -1,0 +1,13 @@
+Place your application icon files here for a branded build:
+- icon.ico  (Windows, 256×256 recommended)
+- icon.icns (macOS)
+- icon.png  (Linux, 512×512 recommended)
+
+After adding the icons, restore the `icon` fields in the `build` section of
+package.json:
+  "win":   { "icon": "build/icon.ico" }
+  "mac":   { "icon": "build/icon.icns" }
+  "linux": { "icon": "build/icon.png" }
+
+The `icon` fields are intentionally omitted until the assets are committed so
+that packaging succeeds with electron-builder's default Electron icon.

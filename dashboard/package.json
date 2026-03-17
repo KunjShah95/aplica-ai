@@ -1,27 +1,89 @@
 {
-  "name": "sentinelbot-dashboard",
+  "name": "aplica-ai",
   "version": "1.0.0",
+  "description": "Aplica AI – workflow automation desktop application",
+  "author": "Aplica AI",
+  "license": "MIT",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:build-main": "tsc -p electron/tsconfig.json",
+    "electron:dev:launch": "wait-on http://localhost:3001 file:./dist-electron/main.js && cross-env NODE_ENV=development electron .",
+    "electron:dev": "concurrently --kill-others \"npm run dev\" \"tsc -p electron/tsconfig.json --watch\" \"npm run electron:dev:launch\"",
+    "electron:build": "npm run build && npm run electron:build-main && electron-builder",
+    "electron:build:win": "npm run build && npm run electron:build-main && electron-builder --win"
+  },
+  "build": {
+    "appId": "ai.aplica.app",
+    "productName": "Aplica AI",
+    "copyright": "Copyright © 2024 Aplica AI",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "!**/node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Aplica AI"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
   },
   "dependencies": {
+    "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "reactflow": "^11.11.4",
-    "zustand": "^4.4.0",
-    "lucide-react": "^0.294.0"
+    "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@types/node": "^20.19.37",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^10.1.0",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.8.1",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0",
     "typescript": "^5.3.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "wait-on": "^8.0.3"
   }
 }
