@@ -34,6 +34,9 @@ import {
   Briefcase,
   Bell,
   Sliders,
+  FileText,
+  TrendingUp,
+  Clock,
 } from 'lucide-react';
 import WorkflowCanvas from './components/workflow/WorkflowCanvas';
 import NodePanel from './components/workflow/NodePanel';
@@ -53,6 +56,9 @@ import BrowserAgent from './components/BrowserAgent';
 import MemoryBrowser from './components/MemoryBrowser';
 import NotificationsCenter from './components/NotificationsCenter';
 import AppSettingsPanel from './components/AppSettingsPanel';
+import ResumeBuilder from './components/ResumeBuilder';
+import JobAnalytics from './components/JobAnalytics';
+import SchedulerView from './components/SchedulerView';
 import { useWorkflowStore, NodeType } from './store/workflowStore';
 
 type Tab =
@@ -73,7 +79,10 @@ type Tab =
   | 'browser'
   | 'memory'
   | 'notifications'
-  | 'app-settings';
+  | 'app-settings'
+  | 'resume'
+  | 'job-analytics'
+  | 'scheduler';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('workflow');
@@ -149,6 +158,9 @@ function App() {
     { id: 'browser', label: 'Browser Agent', icon: <Globe className="w-5 h-5" />, section: 'tools' },
     { id: 'memory', label: 'Memory', icon: <Brain className="w-5 h-5" />, section: 'tools' },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" />, section: 'tools' },
+    { id: 'resume', label: 'Resume Builder', icon: <FileText className="w-5 h-5" />, section: 'tools' },
+    { id: 'job-analytics', label: 'Job Analytics', icon: <TrendingUp className="w-5 h-5" />, section: 'tools' },
+    { id: 'scheduler', label: 'Scheduler', icon: <Clock className="w-5 h-5" />, section: 'tools' },
     // Monitoring
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-5 h-5" />, section: 'monitor' },
     { id: 'trace', label: 'Agent Trace', icon: <Activity className="w-5 h-5" />, section: 'monitor' },
@@ -413,6 +425,12 @@ function App() {
             <NotificationsCenter />
           ) : activeTab === 'app-settings' ? (
             <AppSettingsPanel />
+          ) : activeTab === 'resume' ? (
+            <ResumeBuilder />
+          ) : activeTab === 'job-analytics' ? (
+            <JobAnalytics />
+          ) : activeTab === 'scheduler' ? (
+            <SchedulerView />
           ) : (
             <TemplateGallery onSelectTemplate={handleSelectTemplate} />
           )}

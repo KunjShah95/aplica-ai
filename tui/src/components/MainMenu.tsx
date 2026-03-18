@@ -46,6 +46,27 @@ const MENU_ITEMS: MenuItem[] = [
     icon: '📊',
     color: 'blue',
   },
+  {
+    id: 'job-tracker',
+    label: 'Job Tracker',
+    description: 'Track applications, interviews, and offers',
+    icon: '📋',
+    color: 'yellow',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    description: 'API keys, models, preferences, and TUI config',
+    icon: '⚙️',
+    color: 'gray',
+  },
+  {
+    id: 'browser',
+    label: 'Browser / Scraper',
+    description: 'Fetch and extract data from URLs',
+    icon: '🌐',
+    color: 'cyan',
+  },
 ];
 
 interface MainMenuProps {

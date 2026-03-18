@@ -6,6 +6,9 @@ import ChatView from './components/ChatView.js';
 import AutoApplyView from './components/AutoApplyView.js';
 import KnowledgeView from './components/KnowledgeView.js';
 import SystemStatus from './components/SystemStatus.js';
+import JobTrackerView from './components/JobTrackerView.js';
+import SettingsView from './components/SettingsView.js';
+import BrowserView from './components/BrowserView.js';
 
 export type View =
   | 'menu'
@@ -13,7 +16,10 @@ export type View =
   | 'chat'
   | 'autoapply'
   | 'knowledge'
-  | 'status';
+  | 'status'
+  | 'job-tracker'
+  | 'settings'
+  | 'browser';
 
 export default function App() {
   const { exit } = useApp();
@@ -49,12 +55,15 @@ export default function App() {
 
       {/* Content */}
       <Box flexDirection="column" flexGrow={1}>
-        {view === 'menu'      && <MainMenu onSelect={setView} />}
-        {view === 'research'  && <ResearchView />}
-        {view === 'chat'      && <ChatView />}
-        {view === 'autoapply' && <AutoApplyView />}
-        {view === 'knowledge' && <KnowledgeView />}
-        {view === 'status'    && <SystemStatus />}
+        {view === 'menu'        && <MainMenu onSelect={setView} />}
+        {view === 'research'    && <ResearchView />}
+        {view === 'chat'        && <ChatView />}
+        {view === 'autoapply'   && <AutoApplyView />}
+        {view === 'knowledge'   && <KnowledgeView />}
+        {view === 'status'      && <SystemStatus />}
+        {view === 'job-tracker' && <JobTrackerView onBack={() => setView('menu')} />}
+        {view === 'settings'    && <SettingsView onBack={() => setView('menu')} />}
+        {view === 'browser'     && <BrowserView onBack={() => setView('menu')} />}
       </Box>
 
       {/* Footer */}

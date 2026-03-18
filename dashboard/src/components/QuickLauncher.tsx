@@ -21,6 +21,8 @@ import {
   Briefcase,
   Bell,
   Sliders,
+  TrendingUp,
+  Clock,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -204,6 +206,33 @@ export default function QuickLauncher({ onNavigate, overlay = false }: QuickLaun
       category: 'navigation',
       action: () => navigate('app-settings'),
       keywords: ['settings', 'api', 'keys', 'models', 'appearance', 'shortcuts', 'privacy'],
+    },
+    {
+      id: 'nav-resume',
+      label: 'Resume Builder',
+      description: 'AI-powered resume editor with ATS scoring',
+      icon: <FileText className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('resume'),
+      keywords: ['resume', 'cv', 'ats', 'job', 'career', 'builder'],
+    },
+    {
+      id: 'nav-job-analytics',
+      label: 'Job Analytics',
+      description: 'Application stats, funnel, and response rates',
+      icon: <TrendingUp className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('job-analytics'),
+      keywords: ['analytics', 'stats', 'jobs', 'applications', 'funnel', 'rate'],
+    },
+    {
+      id: 'nav-scheduler',
+      label: 'Task Scheduler',
+      description: 'Automate recurring research, apply, and agent jobs',
+      icon: <Clock className="w-4 h-4" />,
+      category: 'navigation',
+      action: () => navigate('scheduler'),
+      keywords: ['scheduler', 'cron', 'automation', 'tasks', 'jobs', 'schedule'],
     },
     // Agent commands
     {
