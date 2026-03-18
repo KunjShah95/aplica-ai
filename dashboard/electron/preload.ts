@@ -12,6 +12,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   getPlatform: (): Promise<string> => ipcRenderer.invoke('get-platform'),
 
+  // ── Menu actions (native menu → renderer) ──────────────────────────────
+  /**
+   * Subscribe to native app-menu actions. Returns an unsubscribe function
+   * so callers can clean up their own listeners without affecting others.
+   */
+  onMenuAction: (callback: (action: string) => void): (() => void) => {
+    const onNewWorkflow = () => callback('new-workflow');
+    const onAbout = () => callback('about');
+    ipcRenderer.on('menu:new-workflow', onNewWorkflow);
+    ipcRenderer.on('menu:about', onAbout);
+    return () => {
+      ipcRenderer.removeListener('menu:new-workflow', onNewWorkflow);
+      ipcRenderer.removeListener('menu:about', onAbout);
+    };
+  },
+
   // ── File system ────────────────────────────────────────────────────────
   readFile: (filePath: string): Promise<{ ok: boolean; content?: string; error?: string }> =>
     ipcRenderer.invoke('read-file', filePath),

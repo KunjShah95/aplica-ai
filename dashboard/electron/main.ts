@@ -9,7 +9,7 @@ import {
   Notification,
   globalShortcut,
   shell,
-  protocol,
+  screen,
 } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +19,7 @@ import http from 'node:http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
-const VITE_DEV_SERVER_URL = 'http://localhost:3001/dashboard';
+const VITE_DEV_SERVER_URL = 'http://localhost:3001';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -48,7 +48,7 @@ function createMainWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
       webSecurity: true,
     },
   });
@@ -86,7 +86,6 @@ function createQuickLauncherWindow(): void {
     return;
   }
 
-  const { screen } = require('electron');
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width } = primaryDisplay.workAreaSize;
 
@@ -105,7 +104,7 @@ function createQuickLauncherWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   });
 
@@ -467,14 +466,6 @@ function registerGlobalShortcuts(): void {
 // ── App Lifecycle ─────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
-  // Register custom protocol for production file loading
-  if (!isDev) {
-    protocol.registerFileProtocol('app', (request, callback) => {
-      const url = request.url.replace('app://', '');
-      callback({ path: path.join(__dirname, '../dist', url) });
-    });
-  }
-
   createMainWindow();
   createTray();
   buildAppMenu();

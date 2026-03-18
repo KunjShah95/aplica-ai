@@ -17,5 +17,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          reactflow: ["reactflow"],
+          zustand: ["zustand"],
+        },
+      },
+    },
   },
 });

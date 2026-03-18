@@ -8,9 +8,18 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import './index.css';
 
-const path = window.location.pathname;
+// When running as a packaged Electron app (file:// protocol) always render the
+// main dashboard directly – the web landing/marketing pages are not meaningful
+// in a desktop context and pathname-based routing doesn't work under file://.
+const isElectron = window.location.protocol === 'file:';
 
 const Page = () => {
+  if (isElectron) {
+    return <App />;
+  }
+
+  const path = window.location.pathname;
+
   if (path === '/' || path === '/landing') {
     return <Landing />;
   }
