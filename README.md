@@ -153,7 +153,7 @@ npm run dev:cli
 
 ```env
 # Required
-DATABASE_URL=postgresql://postgres:HACKER_K@localhost:5432/alpicia
+DATABASE_URL=postgresql://postgres:password@localhost:5432/alpicia
 LLM_API_KEY=sk-your-api-key
 
 # Optional - Platform tokens
